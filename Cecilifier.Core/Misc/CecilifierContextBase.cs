@@ -61,6 +61,8 @@ namespace Cecilifier.Core.Misc
 
         public abstract DefinitionVariable GetMethodVariable(IMethodSymbol method);
 
+        public abstract void FinishCodeGeneration();
+
         public LinkedListNode<string> CurrentLine => output.Last;
 
         public int CecilifiedLineNumber { get; protected set; }

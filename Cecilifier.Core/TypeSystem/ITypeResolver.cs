@@ -18,7 +18,7 @@ public interface ITypeResolver
     /// <param name="typeParameterKind"></param>
     /// <param name="resolutionContext"></param>
     /// <returns>
-    /// Api Drivers which represents 'Generic Type Parameters' as instances of types this method must simply return <param name="genericTypeParameter"></param>
+    /// In Api Drivers which represents 'Generic Type Parameters' as instances of types this method must simply return <param name="genericTypeParameter"></param>
     /// Others must return a valid expression (variable name, method call, etc) representing the generic type parameter. 
     /// </returns>
     ResolvedType ResolveTypeParameter(ResolvedType genericTypeParameter, TypeParameterKind typeParameterKind, in TypeResolutionContext resolutionContext);

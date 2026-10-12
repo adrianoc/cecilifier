@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Cecilifier.Core.TypeSystem;
 
 namespace Cecilifier.Core.ApiDriver;
 
@@ -32,7 +33,7 @@ public struct CecilifierInterpolatedStringHandler
     
     public void AppendFormatted<T>(T value)
     {
-        WriteString(value == null ? "null" : value.ToString(), typeof(T) == typeof(string));
+        WriteString(value == null ? "null" : value.ToString(), typeof(T) == typeof(string) || typeof(T) == typeof(ResolvedType));
         lastIndent = 0;
     }
 

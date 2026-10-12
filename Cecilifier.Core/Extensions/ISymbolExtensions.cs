@@ -428,5 +428,8 @@ namespace Cecilifier.Core.Extensions
                 
             return modifiers.ToString();
         }
+        
+        public static TypeResolutionContext NewTypeResolutionContextFor(this ITypeSymbol type, ResolveTargetKind resolveTargetKind) =>
+            new(resolveTargetKind, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None);
     }
 }

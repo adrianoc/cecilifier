@@ -74,7 +74,8 @@ public class SnippetRunner
         {
             CilOperandValue cilOperand => $", {cilOperand.Value}",
             CilLocalVariableHandle fieldHandle => $", {fieldHandle.Value}",
-            ResolvedType rt => rt.Expression == null ? string.Empty : $", {rt.Expression}", 
+            ResolvedType rt => rt.Expression == null ? string.Empty : $", {rt.Expression}",
+            CilToken token => token.VariableName == null ? string.Empty : $", {token.VariableName}",
             _ => operand == null ? string.Empty : $", {operand}"
         };
         

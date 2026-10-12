@@ -35,7 +35,7 @@ public class ArrayInitializationProcessor
 
             var operation = GetConversionOperation(parentOperation, i);
             context.TryApplyConversions(visitor.ILVariable, operation);
-            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, stelemOpCode, stelemOpCode == OpCodes.Stelem ? resolvedElementType : null);
+            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, stelemOpCode, stelemOpCode == OpCodes.Stelem ? resolvedElementType.AsToken() : default);
         }
         IConversionOperation GetConversionOperation(IOperation operation, int index)
         {

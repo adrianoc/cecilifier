@@ -28,6 +28,7 @@ internal struct AttributeEncoder
                                      {_attributeEncoderVar}.CustomAttributeSignature(out var {fixedArgumentsEncoderVariableName}, out var {namedArgumentsEncoderVariableName});
                                      """);
 
+        encoded.AppendLine();
         EncodeArguments(fixedArgumentsEncoderVariableName, arguments, encoded);
         EncodeNamedArguments(namedArgumentsEncoderVariableName, namedArguments, encoded);
 

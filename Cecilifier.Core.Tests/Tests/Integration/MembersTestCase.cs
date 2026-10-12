@@ -20,7 +20,6 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("SimpleEvent")]
         [TestCase("StaticEvent")]
         [TestCase("GenericEventHandler")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("SimpleEvent", "StaticEvent")]
         public void TestEvents(string testName)
         {
             AssertResourceTest($"Members/Events/{testName}");

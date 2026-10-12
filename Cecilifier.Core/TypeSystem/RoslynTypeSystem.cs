@@ -59,7 +59,7 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemIndex { get; }
     public ITypeSymbol SystemRange { get; }
     public ITypeSymbol SystemType { get; }
-    public ITypeSymbol SystemSpan { get; }
+    public INamedTypeSymbol SystemSpan { get; }
     
     public Lazy<ITypeSymbol> SystemReadOnlySpan { get; }
     

@@ -299,7 +299,11 @@ namespace Cecilifier.Core.AST
             // for such types fails whence we `unwrap` (remove the `ref` information) the type, resolve
             // the symbol and then `wrap` the result.
             var isByRef = type is RefTypeSyntax;
-            var resolvedType = Context.TypeResolver.Resolve(ResolveTypeSymbol(type), new TypeResolutionContext(resolveTargetKind, isByRef ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None));
+            var typeSymbol = ResolveTypeSymbol(type);
+            var options = (isByRef ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None) | 
+                          (typeSymbol.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None);
+            
+            var resolvedType = Context.TypeResolver.Resolve(typeSymbol, new TypeResolutionContext(resolveTargetKind, options));
             return isByRef ? Context.TypeResolver.MakeByRefType(resolvedType) : resolvedType;
         }
         
@@ -703,8 +707,7 @@ namespace Cecilifier.Core.AST
                 var symbol = context.SemanticModel.GetDeclaredSymbol(typeParameter).EnsureNotNull();
                 var parentName = symbol.TypeParameterKind == TypeParameterKind.Method ? symbol.DeclaringMethod?.OriginalDefinition.ToDisplayString() : symbol.DeclaringType?.OriginalDefinition.ToDisplayString();
                 var typeParamVariable = context.DefinitionVariables.GetVariable(typeParameter.Identifier.Text, VariableMemberKind.TypeParameter, parentName);
-                if (!typeParamVariable.IsValid)
-                    throw new Exception($"Failed to find variable for type parameter '{parentName}.{symbol.FullyQualifiedName()}'");
+                typeParamVariable.ThrowIfVariableIsNotValid($"Failed to find variable for type parameter '{parentName}.{symbol.FullyQualifiedName()}'");
                 
                 HandleAttributesInMemberDeclaration(context, typeParameter.Identifier.Text, typeParameter.AttributeLists, typeParamVariable.VariableName, VariableMemberKind.TypeParameter);
             }

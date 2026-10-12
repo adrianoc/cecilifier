@@ -42,16 +42,18 @@ internal static class CollectionExpressionProcessor
         var index = 0;
         var spanGetItemMethod = CecilDefinitionsFactory.Collections.GetSpanIndexerGetter(context, resolvedListTypeArgument);
         var stindOpCode = listOfTTypeSymbol.TypeArguments[0].StindOpCodeFor();
-        var targetElementType = stindOpCode == OpCodes.Stobj ? resolvedListTypeArgument : null; // Stobj expects the type of the object being stored.
+        var targetElementType = stindOpCode == OpCodes.Stobj 
+                                        ? context.TypeResolver.Resolve(listOfTTypeSymbol.TypeArguments[0], ResolveTargetKind.Instruction) 
+                                        : null; // Stobj expects the type of the object being stored.
         
         foreach (var element in node.Elements)
         {
-            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, spanToList.VariableName);
+            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, spanToList.VariableName.AsLocalVariable());
             context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldc_I4, index);
-            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, spanGetItemMethod);
+            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, spanGetItemMethod.AsToken());
             visitor.Visit(element);
             context.TryApplyConversions(visitor.ILVariable, collectionExpressionOperation.Elements[index]);
-            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, stindOpCode, targetElementType);
+            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, stindOpCode, targetElementType.AsToken());
             index++;
         }
     }
@@ -61,20 +63,24 @@ internal static class CollectionExpressionProcessor
         Debug.Assert(SymbolEqualityComparer.Default.Equals(spanTypeSymbol.OriginalDefinition, visitor.Context.RoslynTypeSystem.SystemSpan));
      
         var context = visitor.Context;
-        var inlineArrayVar = GetOrEmitSyntheticInlineArrayFor(node, context);
+        var (inlineArrayType, inlineArrayTypeName) = GetOrEmitSyntheticInlineArrayFor(node, context);
         
         var currentMethodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method).VariableName;
         var inlineArrayElementType = spanTypeSymbol.TypeArguments[0];
-        var inlineArrayTypeVar = inlineArrayVar.MakeGenericInstanceType(context.TypeResolver.Resolve(inlineArrayElementType, ResolveTargetKind.Instruction));
-        var inlineArrayTypeVarForLocal = inlineArrayVar.MakeGenericInstanceType(context.TypeResolver.Resolve(inlineArrayElementType, ResolveTargetKind.LocalVariable));
+        
+        var inlineArrayTypeResolutionContext = inlineArrayElementType.NewTypeResolutionContextFor(ResolveTargetKind.GenericTypeArgument);
+        var inlineArrayTypeVar = context.TypeResolver.MakeGenericInstanceType(inlineArrayTypeName, inlineArrayType, [context.TypeResolver.Resolve(inlineArrayElementType, inlineArrayTypeResolutionContext)], new TypeResolutionContext(ResolveTargetKind.Instruction, TypeResolutionOptions.IsValueType));
+        var inlineArrayTypeVarForLocal = context.TypeResolver.MakeGenericInstanceType(inlineArrayTypeName, inlineArrayType, [context.TypeResolver.Resolve(inlineArrayElementType, inlineArrayTypeResolutionContext)], new TypeResolutionContext(ResolveTargetKind.LocalVariable, TypeResolutionOptions.IsValueType)); 
+        var inlineArrayTypeVarForTypeArgument = context.TypeResolver.MakeGenericInstanceType(inlineArrayTypeName, inlineArrayType, [context.TypeResolver.Resolve(inlineArrayElementType, inlineArrayTypeResolutionContext)], new TypeResolutionContext(ResolveTargetKind.GenericTypeArgument, TypeResolutionOptions.IsValueType));
+            
         var inlineArrayLocalVar = context.ApiDefinitionsFactory.LocalVariable(context, "buffer", currentMethodVar, inlineArrayTypeVarForLocal).VariableName;
         
         // Initializes the inline array
-        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar);
-        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Initobj, inlineArrayTypeVar);
+        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar.AsLocalVariable());
+        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Initobj, inlineArrayTypeVar.Expression.AsToken());
 
         var openInlineArrayElementRef = PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayElementRefMethod(context);
-        IReadOnlyList<ResolvedType> resolvedTypeArguments = [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.Resolve(spanTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference)];
+        IReadOnlyList<ResolvedType> resolvedTypeArguments = [inlineArrayTypeVarForTypeArgument, context.TypeResolver.Resolve(spanTypeSymbol.TypeArguments[0], spanTypeSymbol.TypeArguments[0].NewTypeResolutionContextFor(ResolveTargetKind.GenericTypeArgument))];
         var inlineArrayElementRefMethodVar = context.MemberResolver.MakeGeneticInstanceMethod(openInlineArrayElementRef.VariableName, openInlineArrayElementRef.MemberName, resolvedTypeArguments);
         
         var storeOpCode = inlineArrayElementType.StindOpCodeFor();
@@ -83,25 +89,25 @@ internal static class CollectionExpressionProcessor
         var index = 0;
         foreach (var element in node.Elements)
         {
-            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar);
+            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar.AsLocalVariable());
             context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldc_I4, index);
-            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, inlineArrayElementRefMethodVar);
+            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, inlineArrayElementRefMethodVar.AsToken());
             visitor.Visit(element);
             context.TryApplyConversions(visitor.ILVariable, collectionExpressionOperation.Elements[index]);
-            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, storeOpCode, targetElementType);
+            context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, storeOpCode, targetElementType.AsToken());
             index++;
         }
         
         // convert the initialized InlineArray to a span and put it in the stack.
         var openInlineArrayAsSpanVar = PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayAsSpanMethod(context);
-        IReadOnlyList<ResolvedType> typeArguments = [$"{inlineArrayLocalVar}.VariableType", context.TypeResolver.Resolve(spanTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference)];
-        var inlineArrayAsSpanMethodVar = context.MemberResolver.MakeGeneticInstanceMethod(openInlineArrayAsSpanVar.VariableName, openInlineArrayAsSpanVar.MemberName, typeArguments);
-        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar);
+
+        var inlineArrayAsSpanMethodVar = context.MemberResolver.MakeGeneticInstanceMethod(openInlineArrayAsSpanVar.VariableName, openInlineArrayAsSpanVar.MemberName, resolvedTypeArguments);
+        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar.AsLocalVariable());
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldc_I4, node.Elements.Count);
-        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, inlineArrayAsSpanMethodVar);
+        context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Call, inlineArrayAsSpanMethodVar.AsToken());
     }
 
-    private static ResolvedType GetOrEmitSyntheticInlineArrayFor(CollectionExpressionSyntax node, IVisitorContext context)
+    private static (ResolvedType, string) GetOrEmitSyntheticInlineArrayFor(CollectionExpressionSyntax node, IVisitorContext context)
     {
         return InlineArrayGenerator.GetOrGenerateInlineArrayType(context, node.Elements.Count, $"Declares an inline array for backing the data for the collection expression: {node.SourceDetails()}");
     }

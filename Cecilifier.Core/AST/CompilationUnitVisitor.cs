@@ -23,6 +23,7 @@ namespace Cecilifier.Core.AST
             VisitDeclaredTypesSortedByDependencies();
             
             base.VisitCompilationUnit(node);
+            Context.FinishCodeGeneration();
         }
 
         public override void VisitGlobalStatement(GlobalStatementSyntax node)

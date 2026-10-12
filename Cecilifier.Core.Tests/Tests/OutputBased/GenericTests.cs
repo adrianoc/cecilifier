@@ -2,7 +2,6 @@ using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
-using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
@@ -53,7 +52,6 @@ public class GenericTests<TContext> : OutputBasedTestBase<TContext> where TConte
     }
     
     [Test]
-    [DisableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Throws `Metadata table GenericParam not sorted.` (#375)")]
     public void TypeParameterMetadataTables_AreSorted()
     {
         AssertOutput("""

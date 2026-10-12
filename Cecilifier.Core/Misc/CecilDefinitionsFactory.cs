@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
@@ -94,12 +95,13 @@ namespace Cecilifier.Core.Misc
             /// <param name="elementCount">Number of elements to be stored.</param>
             public static (DefinitionVariable, ResolvedType) InstantiateListToStoreElements(IVisitorContext context, IlContext ilVar, INamedTypeSymbol listOfTTypeSymbol, int elementCount)
             {
-                var resolvedListTypeArgument = context.TypeResolver.Resolve(listOfTTypeSymbol.TypeArguments[0], ResolveTargetKind.TypeReference);
+                var resolvedListTypeArgument = context.TypeResolver.Resolve(listOfTTypeSymbol.TypeArguments[0], listOfTTypeSymbol.TypeArguments[0].NewTypeResolutionContextFor(ResolveTargetKind.GenericTypeArgument));
 
                 context.WriteNewLine();
                 context.WriteComment("Instantiates a List<T> passing the # of elements to its ctor.");
                 context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldc_I4, elementCount);
-                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, listOfTTypeSymbol.Constructors.First(ctor => ctor.Parameters.Length == 1).MethodResolverExpression(context));
+                var listCtorTakingLength = listOfTTypeSymbol.Constructors.Single(ctor => ctor.Parameters.Length == 1 && SymbolEqualityComparer.Default.Equals(ctor.Parameters[0].Type, context.RoslynTypeSystem.SystemInt32));
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Newobj, listCtorTakingLength.MethodResolverExpression(context).AsToken());
 
                 // Pushes an extra copy of the reference to the list instance into the stack
                 // to avoid introducing a local variable. This will be left at the top of the stack
@@ -112,34 +114,32 @@ namespace Cecilifier.Core.Misc
                 
                 context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Dup);
                 context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldc_I4, elementCount);
-                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, setCountMethod);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, setCountMethod.AsToken());
                 
                 context.WriteNewLine();
                 context.WriteComment("Add a Span<T> local variable and initialize it with `CollectionsMarshal.AsSpan(list)`");
-                var spanToList = context.AddLocalVariableToCurrentMethod(
-                    "listSpan", 
-                    context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan, ResolveTargetKind.LocalVariable).MakeGenericInstanceType(resolvedListTypeArgument));
 
-                context.ApiDriver.WriteCilInstruction(context, ilVar, 
-                    OpCodes.Call, 
-                    context.MemberResolver.MakeGeneticInstanceMethod(collectionMarshalTypeSymbol.GetMembers("AsSpan").OfType<IMethodSymbol>().Single().MethodResolverExpression(context), "AsSpan", [ resolvedListTypeArgument ]));
+                var spanResolutionContext = context.RoslynTypeSystem.SystemSpan.NewTypeResolutionContextFor(ResolveTargetKind.LocalVariable);
+                var localVariableType = context.TypeResolver.MakeGenericInstanceType("Span", context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan, spanResolutionContext), [resolvedListTypeArgument], spanResolutionContext);
+                var spanToList = context.AddLocalVariableToCurrentMethod("listSpan", localVariableType);
+
+                var asSpanMethod = context.MemberResolver.MakeGeneticInstanceMethod(collectionMarshalTypeSymbol.GetMembers("AsSpan").OfType<IMethodSymbol>().Single().MethodResolverExpression(context), "AsSpan", [ resolvedListTypeArgument ]);
+                context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Call, asSpanMethod.AsToken());
                 context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(spanToList.VariableName));
                 
                 return (spanToList, resolvedListTypeArgument);
             }
             
-            public static string GetSpanIndexerGetter(IVisitorContext context, ResolvedType typeArgument)
+            public static string GetSpanIndexerGetter(IVisitorContext context, ResolvedType spanType)
             {
                 var methodVar = context.Naming.SyntheticVariable("getItem", ElementKind.Method);
-                var declaringType = context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan, ResolveTargetKind.TypeReference).MakeGenericInstanceType(typeArgument);
-                context.Generate($$"""var {{methodVar}} = new MethodReference("get_Item", {{context.TypeResolver.Bcl.System.Void}}, {{declaringType}}) { HasThis = true, ExplicitThis = false };""");
-                context.WriteNewLine();
-                context.Generate($"{methodVar}.Parameters.Add(new ParameterDefinition({context.TypeResolver.Bcl.System.Int32}));");
-                context.WriteNewLine();
-                context.Generate($"""{methodVar}.ReturnType = ((GenericInstanceType) {methodVar}.DeclaringType).ElementType.GenericParameters[0].MakeByReferenceType();""");
-                context.WriteNewLine();
+                
+                var returnType = context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan.TypeParameters[0], new TypeResolutionContext(ResolveTargetKind.ReturnType, TypeResolutionOptions.IsByRef, methodVar));
+                var concreteSpanResolutionContext = context.RoslynTypeSystem.SystemSpan.NewTypeResolutionContextFor(ResolveTargetKind.TypeReference);
+                var declaringType = context.TypeResolver.MakeGenericInstanceType("Span", context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemSpan, concreteSpanResolutionContext), [spanType], concreteSpanResolutionContext);
 
-                return methodVar;
+                var indexParamType = new ParameterSpec("index", context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None);
+                return context.MemberResolver.ResolveMethod("declaring-type-name", declaringType.Expression, "get_Item", context.TypeResolver.MakeByRefType(returnType), [indexParamType], [], MemberOptions.None) ?? throw new ArgumentNullException("context.MemberResolver.ResolveMethod(\"declaring-type-name\", declaringType.Expression, \"get_Item\", context.TypeResolver.MakeByRefType(returnType), [indexParamType], [], MemberOptions.None)");
             }
         }
     }

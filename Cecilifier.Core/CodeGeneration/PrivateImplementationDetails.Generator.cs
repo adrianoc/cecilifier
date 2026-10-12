@@ -216,14 +216,14 @@ internal partial class PrivateImplementationDetailsGenerator
         };
         var ilContext = context.ApiDriver.NewIlContext(context, "InlineArrayElementRef", methodVar);
         var methodExpressions = context.ApiDefinitionsFactory.Method(
-            context, 
-            new BodiedMemberDefinitionContext("InlineArrayElementRef", methodTypeQualifiedName, methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.Static, ilContext), 
-            declaringTypeName, 
-            "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
-            parameters, 
-            typeParameters, 
-            returnTypeResolver,
-            out var methodDefinitionVariable);
+                                                                    context, 
+                                                                    new BodiedMemberDefinitionContext("InlineArrayElementRef", methodTypeQualifiedName, methodVar, privateImplementationDetailsVar.VariableName, MemberOptions.Static, ilContext), 
+                                                                    declaringTypeName, 
+                                                                    "MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig", 
+                                                                    parameters, 
+                                                                    typeParameters, 
+                                                                    returnTypeResolver,
+                                                                    out var methodDefinitionVariable);
 
         context.Generate(methodExpressions);
         

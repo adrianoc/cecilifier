@@ -136,7 +136,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         context.Generate($"""var {methodWithIncorrectDeclaringType} = assembly.MainModule.ImportReference({correctDeclaringType}.ElementType.Resolve().Methods.Single(m => m.Name == "{methodName}" && m.Parameters.Count == {parameters.Count}));""");
         context.WriteNewLine();
 
-        var variable = context.Naming.SyntheticVariable("genericMethod", ElementKind.MemberReference);
+        var variable = context.Naming.SyntheticVariable(methodName, ElementKind.MemberReference);
         context.Generate($$"""
                           var {{variable}} = new MethodReference({{methodWithIncorrectDeclaringType}}.Name, {{methodWithIncorrectDeclaringType}}.ReturnType)
                           {

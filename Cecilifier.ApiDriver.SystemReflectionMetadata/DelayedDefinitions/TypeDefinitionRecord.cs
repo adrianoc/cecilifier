@@ -6,7 +6,6 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata.DelayedDefinitions;
 /// <summary>
 /// 
 /// </summary>
-/// <param name="TypeQualifiedName"></param>
 /// <param name="TypeReferenceVariable">Name of the variable that stores the type reference emitted to represent a type definition. See <see cref="TypeDefinitionVariable"/></param>
 internal record struct TypeDefinitionRecord(string TypeReferenceVariable)
 {
@@ -17,7 +16,7 @@ internal record struct TypeDefinitionRecord(string TypeReferenceVariable)
     public string? TypeDefinitionVariable { get; internal set; }
 
     /// <summary>
-    /// The name of the variable representing the definition of the first method of the type. <see cref="FirstFieldHandle"/> 
+    /// The name of the variable representing the definition of the first method of the type. 
     /// </summary>
     public string? FirstMethodHandle { get; set; }
     
