@@ -82,8 +82,19 @@ public class CecilifierTestBase<TContext> where TContext : IVisitorContext
 
         var v = new Verifier(new AssemblyResolver(dotnetRootPath), new VerifierOptions() { IncludeMetadataTokensInErrorMessages = true});
         v.SetSystemModuleName(new AssemblyNameInfo("mscorlib"));
-        var assemblyReaderToVerify = new PEReader(new FileStream(actualAssemblyPath, FileMode.Open));
-        var verifierResults = v.Verify(assemblyReaderToVerify).ToArray();
+        using var assemblyReaderToVerify = new PEReader(new FileStream(actualAssemblyPath, FileMode.Open));
+        VerificationResult[] verifierResults;
+
+        try
+        {
+            verifierResults = v.Verify(assemblyReaderToVerify).ToArray();
+
+        }
+        catch (Exception)
+        {
+            TestContext.WriteLine($"Processing : {actualAssemblyPath}");
+            throw;
+        }
         
         if (verifierResults.Length > 0)
         {
