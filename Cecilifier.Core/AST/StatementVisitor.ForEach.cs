@@ -123,9 +123,9 @@ namespace Cecilifier.Core.AST
             Context.WriteComment("variable to store current value in the foreach loop.");
             var resolvedType = Context.TypeResolver.Resolve(forEachHandlerContext.EnumeratorCurrentProperty.GetMemberType(), ResolveTargetKind.LocalVariable);
             var foreachCurrentValueVarName = Context.AddLocalVariableToCurrentMethod(node.Identifier.ValueText, resolvedType).VariableName;
-            
+             
             var endOfLoopLabelVar = Context.Naming.Label("endForEach");
-            CreateCilInstruction(_ilVar, endOfLoopLabelVar, OpCodes.Nop);
+            Context.ApiDriver.DefineLabel(Context, _ilVar, endOfLoopLabelVar);
 
             // loop while enumerable.MoveNext() == true
             var forEachLoopBegin = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
@@ -133,7 +133,7 @@ namespace Cecilifier.Core.AST
             var loadOpCode = forEachHandlerContext.GetEnumeratorMethod.ReturnType.IsValueType || forEachHandlerContext.GetEnumeratorMethod.ReturnType.TypeKind == TypeKind.TypeParameter ? OpCodes.Ldloca : OpCodes.Ldloc;
             Context.ApiDriver.WriteCilInstruction(Context, _ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
             Context.AddCallToMethod(forEachHandlerContext.EnumeratorMoveNextMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Brfalse, endOfLoopLabelVar);
+            Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Brfalse, endOfLoopLabelVar);
             
             Context.ApiDriver.WriteCilInstruction(Context, _ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
             Context.AddCallToMethod(forEachHandlerContext.EnumeratorCurrentProperty.GetMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
@@ -152,11 +152,10 @@ namespace Cecilifier.Core.AST
             Context.WriteComment("end of foreach body");
             Context.WriteNewLine();
 
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Br, forEachLoopBegin);
+            Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Br, forEachLoopBegin);
             Context.WriteNewLine();
             Context.WriteComment("end of foreach loop");
-            //TODO: Mono.Cecil specific
-            Context.Generate($"{_ilVar.VariableName}.Append({endOfLoopLabelVar});");
+            Context.ApiDriver.MarkLabel(Context, _ilVar, endOfLoopLabelVar);
             Context.WriteNewLine();
         }
 
