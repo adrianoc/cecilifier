@@ -292,6 +292,11 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     protected override ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext)
     {
         var details = new ResolvedTypeDetails();
+        if (pointerType.SpecialType == SpecialType.System_Void)
+        {
+            return ResolvedType.FromDetails(details.WithTypeEncoder(TypeEncoderFor(in resolutionContext)).WithMethodBuilder("VoidPointer()"));
+        }
+        
         return ResolvedType.FromDetails(
             details.WithTypeEncoder(TypeEncoderFor(in resolutionContext))
                 .WithMethodBuilder($"Pointer().{Resolve(pointerType, new TypeResolutionContext(ResolveTargetKind.ComposedElementType, resolutionContext.Options))}"));

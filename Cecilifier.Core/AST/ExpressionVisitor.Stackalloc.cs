@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Reflection.Emit;
-using Cecilifier.Core.ApiDriver.Handles;
+using Cecilifier.Core.ApiDriver;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -12,13 +12,13 @@ using Cecilifier.Core.CodeGeneration;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Mappings;
 using Cecilifier.Core.Misc;
-using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
 using static Cecilifier.Core.Misc.CodeGenerationHelpers;
 
 namespace Cecilifier.Core.AST;
 
+#nullable enable
 partial class ExpressionVisitor
 {
     public override void VisitImplicitStackAllocArrayCreationExpression(ImplicitStackAllocArrayCreationExpressionSyntax node)
@@ -30,7 +30,7 @@ partial class ExpressionVisitor
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, node.Initializer.EnsureNotNull<SyntaxNode, InitializerExpressionSyntax>().Expressions.Count);
 
         var stackallocSpanAssignmentTracker = new StackallocSpanAssignmentTracker(node, Context);
-        var resolvedArrayElementType = Context.TypeResolver.Resolve(arrayElementType, ResolveTargetKind.None);
+        var resolvedArrayElementType = Context.TypeResolver.Resolve(arrayElementType, ResolveTargetKind.Instruction);
         CalculateLengthInBytesAndEmitLocalloc(stackallocSpanAssignmentTracker, null, resolvedArrayElementType, false);
 
         ProcessStackAllocInitializer(node.Initializer);
@@ -38,7 +38,7 @@ partial class ExpressionVisitor
         if (!stackallocSpanAssignmentTracker)
             return;
 
-        Context.ApiDriver.WriteCilInstruction(Context, ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable.AsLocalVariable());
         EmitNewobjForSpanOfType(resolvedArrayElementType);
     }
 
@@ -74,7 +74,7 @@ partial class ExpressionVisitor
             ? arrayElementType.Type.SizeofPrimitiveType()
             : int.MaxValue; // this means the size of the elements need to be calculated at runtime... 
 
-        var resolvedElementType = ResolveType(arrayType.ElementType, ResolveTargetKind.None);
+        var resolvedElementType = ResolveType(arrayType.ElementType, ResolveTargetKind.Instruction);
         if (rankNode.IsKind(SyntaxKind.NumericLiteralExpression) && arrayElementType.Type.IsPrimitiveType())
         {
             var elementCount = Int32.Parse(rankNode.GetFirstToken().Text);
@@ -97,12 +97,12 @@ partial class ExpressionVisitor
             if (stackallocSpanAssignmentTracker.HasConstantElementCount)
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, stackallocSpanAssignmentTracker.ConstantElementCount);
             else
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable);
-            EmitNewobjForSpanOfType(resolvedElementType);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, stackallocSpanAssignmentTracker.LoadOpCode, stackallocSpanAssignmentTracker.SpanLengthVariable.AsLocalVariable());
+            EmitNewobjForSpanOfType(ResolveType(arrayType.ElementType, ResolveTargetKind.GenericTypeArgument));
         }
     }
 
-    void ProcessStackAllocInitializer(InitializerExpressionSyntax node)
+    void ProcessStackAllocInitializer(InitializerExpressionSyntax? node)
     {
         if (node == null)
             return;
@@ -132,7 +132,7 @@ partial class ExpressionVisitor
         Context.WriteNewLine();
         Context.WriteComment($"duplicates the top of the stack (the newly `stackalloced` buffer) and initialize it from the raw buffer ({fieldWithRawData}).");
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);
-        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldsflda, fieldWithRawData);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldsflda, fieldWithRawData.AsToken());
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, sizeInBytes);
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Cpblk);
         Context.WriteComment("finished initializing `stackalloced` buffer.");
@@ -160,20 +160,20 @@ partial class ExpressionVisitor
         }
     }
 
-    private void CalculateLengthInBytesAndEmitLocalloc(StackallocSpanAssignmentTracker stackallocSpanAssignmentTracker, ExpressionSyntax rankNode, ResolvedType elementType, bool elementSizeTakesMoreThanOneByte)
+    private void CalculateLengthInBytesAndEmitLocalloc(StackallocSpanAssignmentTracker stackallocSpanAssignmentTracker, ExpressionSyntax? rankNode, ResolvedType elementType, bool elementSizeTakesMoreThanOneByte)
     {
         if (stackallocSpanAssignmentTracker.AddVariableToStoreElementCountIfRequired(Context, rankNode))
         {
             // result of the stackalloc is being assigned to a Span<T>. We need to initialize it later.. for that we need
             // element count so we store in a new local variable.
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(stackallocSpanAssignmentTracker.SpanLengthVariable));
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, new CilLocalVariableHandle(stackallocSpanAssignmentTracker.SpanLengthVariable));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Stloc, stackallocSpanAssignmentTracker.SpanLengthVariable.AsLocalVariable());
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, stackallocSpanAssignmentTracker.SpanLengthVariable.AsLocalVariable());
         }
 
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Conv_U);
         if (elementSizeTakesMoreThanOneByte) // if element type takes one byte them 'number of elements' == 'size in bytes' and we don't need to multiply
         {
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Sizeof, elementType);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Sizeof, elementType.AsToken());
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Mul_Ovf_Un);
         }
 
@@ -182,15 +182,24 @@ partial class ExpressionVisitor
 
     private void EmitNewobjForSpanOfType(ResolvedType spanType)
     {
-        var spanInstanceType = Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemSpan, ResolveTargetKind.None).MakeGenericInstanceType(spanType);
-        var spanCtorVar = Context.Naming.SyntheticVariable("spanCtor", ElementKind.LocalVariable);
-        AddCecilExpression($"var {spanCtorVar} = new MethodReference(\".ctor\", {Context.TypeResolver.Bcl.System.Void}, {spanInstanceType}) {{ HasThis = true }};");
-        
-        var voidPtr = Context.SemanticModel.Compilation.CreatePointerTypeSymbol(Context.RoslynTypeSystem.SystemVoid);
-        AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue(Context.TypeResolver, "ptr", RefKind.None, Context.TypeResolver.Resolve(voidPtr, ResolveTargetKind.Parameter))});");
-        AddCecilExpression($"{spanCtorVar}.Parameters.Add({CecilDefinitionsFactory.ParameterDoesNotHandleParamsKeywordOrDefaultValue(Context.TypeResolver,"length", RefKind.None, Context.TypeResolver.Bcl.System.Int32)});");
+        var openSpanType = Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemSpan, ResolveTargetKind.Instruction);
+        var syntheticSpanTypeName = $"SpanOf_{spanType.Expression}";
+        var spanConcreteType = Context.TypeResolver.MakeGenericInstanceType(syntheticSpanTypeName, openSpanType, [spanType], ResolveTargetKind.Instruction);
 
-        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newobj, Context.MemberResolver.ImportReference($"{spanCtorVar}"));
+        var voidPtr = Context.SemanticModel.Compilation.CreatePointerTypeSymbol(Context.RoslynTypeSystem.SystemVoid);
+        var spanCtor = Context.MemberResolver.ResolveMethod(
+            syntheticSpanTypeName,
+            spanConcreteType.Expression,
+            ".ctor",
+            Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.Instruction),
+            [
+                new ParameterSpec("ptr", Context.TypeResolver.Resolve(voidPtr, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None),
+                new ParameterSpec("length", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None),
+            ],
+            [],
+            MemberOptions.None);
+        
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Newobj, spanCtor.AsToken());
     }
 }
 
@@ -223,21 +232,21 @@ partial class ExpressionVisitor
  */
 internal interface IStackallocAsArgumentFixer
 {
-    void StoreTopOfStackToLocalVariable(ITypeSymbol type);
-    void MarkEndOfComputedCallTargetBlock(LinkedListNode<string> last);
+    void StoreTopOfStackToLocalVariable(ITypeSymbol? type);
+    void MarkEndOfComputedCallTargetBlock(LinkedListNode<string>? last);
     void RestoreCallStackIfRequired();
 
-    IDisposable FlagAsHavingStackallocArguments();
+    IDisposable? FlagAsHavingStackallocArguments();
 }
 
 class NoOpStackallocAsArgumentHandler : IStackallocAsArgumentFixer
 {
-    void IStackallocAsArgumentFixer.StoreTopOfStackToLocalVariable(ITypeSymbol type) { }
+    void IStackallocAsArgumentFixer.StoreTopOfStackToLocalVariable(ITypeSymbol? type) { }
 
-    void IStackallocAsArgumentFixer.MarkEndOfComputedCallTargetBlock(LinkedListNode<string> last) { }
+    void IStackallocAsArgumentFixer.MarkEndOfComputedCallTargetBlock(LinkedListNode<string>? last) { }
 
     void IStackallocAsArgumentFixer.RestoreCallStackIfRequired() { }
-    public IDisposable FlagAsHavingStackallocArguments() => default;
+    public IDisposable? FlagAsHavingStackallocArguments() => default;
 }
 
 internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
@@ -247,7 +256,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 
     private readonly IVisitorContext context;
     private readonly IlContext ilVar;
-    private LinkedListNode<string> lastLoadTargetOfCallInstruction;
+    private LinkedListNode<string>? lastLoadTargetOfCallInstruction;
     private readonly LinkedListNode<string> firstLoadTargetOfCallInstruction;
 
     private StackallocAsArgumentFixer(IVisitorContext context, IlContext ilVar)
@@ -259,7 +268,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
 
     IDisposable IStackallocAsArgumentFixer.FlagAsHavingStackallocArguments() => context.WithFlag<ContextFlagReseter>(Constants.ContextFlags.HasStackallocArguments);
 
-    void IStackallocAsArgumentFixer.StoreTopOfStackToLocalVariable(ITypeSymbol type)
+    void IStackallocAsArgumentFixer.StoreTopOfStackToLocalVariable(ITypeSymbol? type)
     {
         if (!context.HasFlag(Constants.ContextFlags.HasStackallocArguments))
             return;
@@ -268,13 +277,13 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         if (!methodVar.IsValid)
             throw new InvalidOperationException();
 
-        var cecilVarDeclName = StoreTopOfStackInLocalVariable(context, ilVar, type.Name, type).VariableName;
+        var cecilVarDeclName = StoreTopOfStackInLocalVariable(context, ilVar, type?.Name, type).VariableName;
         context.WriteNewLine();
 
         localVariablesStoringOriginalArguments.Enqueue(cecilVarDeclName);
     }
 
-    void IStackallocAsArgumentFixer.MarkEndOfComputedCallTargetBlock(LinkedListNode<string> last) => lastLoadTargetOfCallInstruction = last;
+    void IStackallocAsArgumentFixer.MarkEndOfComputedCallTargetBlock(LinkedListNode<string>? last) => lastLoadTargetOfCallInstruction = last;
 
     /// <summary>
     /// Restore the stack to: [call target, arg1, ... arg n]
@@ -302,7 +311,7 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         // emit instruction to push original arguments to stack
         foreach (var localVariable in localVariablesStoringOriginalArguments)
         {
-            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldloc, localVariable);
+            context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldloc, localVariable.AsLocalVariable());
             context.WriteNewLine();
         }
 
@@ -329,14 +338,14 @@ internal class StackallocAsArgumentFixer : IStackallocAsArgumentFixer
         return new StackallocPassedAsSpanDisposal(isPassingStackAllocToSpanArg ? new StackallocAsArgumentFixer(context, ilVar) : new NoOpStackallocAsArgumentHandler());
     }
 
-    public static IStackallocAsArgumentFixer Current => handlers.Count > 0 ? handlers.Peek() : null;
+    public static IStackallocAsArgumentFixer? Current => handlers.Count > 0 ? handlers.Peek() : null;
 
     internal struct StackallocPassedAsSpanDisposal : IDisposable
     {
-        private IStackallocAsArgumentFixer parent;
-        private IDisposable stackAllocFlagCleaner;
+        private IStackallocAsArgumentFixer? parent;
+        private IDisposable? stackAllocFlagCleaner;
 
-        public StackallocPassedAsSpanDisposal(IStackallocAsArgumentFixer parent = null)
+        public StackallocPassedAsSpanDisposal(IStackallocAsArgumentFixer? parent = null)
         {
             this.parent = parent;
             stackAllocFlagCleaner = null;
@@ -381,7 +390,7 @@ internal class StackallocSpanAssignmentTracker
         _constElementCount = elementCount;
     }
 
-    public bool AddVariableToStoreElementCountIfRequired(IVisitorContext context, ExpressionSyntax rankNode)
+    public bool AddVariableToStoreElementCountIfRequired(IVisitorContext context, ExpressionSyntax? rankNode)
     {
         if (!isAssignedToSpan)
             return false;
@@ -407,16 +416,13 @@ internal class StackallocSpanAssignmentTracker
             return false;
         }
 
-        SpanLengthVariable = context.Naming.SyntheticVariable("spanElementCount", ElementKind.LocalVariable);
 
         var currentMethodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
         Debug.Assert(currentMethodVar.IsValid);
 
-        context.Generate($"var {SpanLengthVariable} = new VariableDefinition({context.TypeResolver.Bcl.System.Int32});");
-        context.WriteNewLine();
-        context.Generate($"{currentMethodVar.VariableName}.Body.Variables.Add({SpanLengthVariable});");
-        context.WriteNewLine();
+        var spanLengthVariable = context.ApiDefinitionsFactory.LocalVariable(context, "spanElementCount", currentMethodVar, context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.LocalVariable));
 
+        SpanLengthVariable = spanLengthVariable.VariableName;
         LoadOpCode = OpCodes.Ldloc;
 
         return true;
@@ -424,7 +430,7 @@ internal class StackallocSpanAssignmentTracker
 
     public bool HasConstantElementCount => _constElementCount != 0;
     public int ConstantElementCount => _constElementCount;
-    public string SpanLengthVariable { get; private set; }
+    public string? SpanLengthVariable { get; private set; }
     public OpCode LoadOpCode { get; private set; }
 
     public static implicit operator bool(in StackallocSpanAssignmentTracker obj) => obj.isAssignedToSpan;

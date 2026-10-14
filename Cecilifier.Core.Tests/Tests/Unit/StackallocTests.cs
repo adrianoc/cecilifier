@@ -73,42 +73,30 @@ public class StackallocTests : CecilifierUnitTestBase
     }
 
     [Test]
-    public void Test_Issue_133_Assign_StackallocToSpan()
-    {
-        var result = RunCecilifier(@"using System; class Foo { void Bar() { Span<byte> s = stackalloc byte[1000]; } }");
-
-        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        Assert.That(cecilifiedCode, Does.Match(@".+//Span<byte> s = stackalloc byte\[1000\];\s+" +
-                                               @"var l_s_3 = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Byte\)\);\s+" +
-                                               @"m_bar_1.Body.Variables.Add\(l_s_3\);\s+" +
-                                               @"il_bar_2.Emit\(OpCodes.Ldc_I4, 1000\); // 1000 \(elements\) \* 1 \(bytes per element\)\s+" +
-                                               @"il_bar_2.Emit\(OpCodes.Conv_U\);\s+" +
-                                               @"il_bar_2.Emit\(OpCodes.Localloc\);\s+" +
-                                               @"il_bar_2.Emit\(OpCodes.Ldc_I4, 1000\);\s+"));
-        Assert.That(cecilifiedCode, Does.Match(
-            @"il_bar_2.Emit\(OpCodes.Newobj, assembly.MainModule.ImportReference\(l_spanCtor_4\)\);\s+" +
-            @"il_bar_2.Emit\(OpCodes.Stloc, l_s_3\);\s+"));
-    }
-
-    [Test]
     public void Test_Issue_133_Span_InitializedByStackallocWithSizeFromParameter_PassedAsParameter()
     {
         var result = RunCecilifier(@"using System; class Foo { static void Bar(Span<int> span) {  Bar(stackalloc int[1000]); } }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        var expectedLines = new[]
-        {
-                "il_bar_2.Emit(OpCodes.Ldc_I4, 4000);", "il_bar_2.Emit(OpCodes.Conv_U);", "il_bar_2.Emit(OpCodes.Localloc);", "il_bar_2.Emit(OpCodes.Ldc_I4, 4000);",
-                "var l_spanCtor_4 = new MethodReference(\".ctor\", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference(typeof(System.Span<>)).MakeGenericInstanceType(assembly.MainModule.TypeSystem.Int32)) { HasThis = true };",
-                "l_spanCtor_4.Parameters.Add(new ParameterDefinition(\"ptr\", ParameterAttributes.None, assembly.MainModule.TypeSystem.Void.MakePointerType()));",
-                "l_spanCtor_4.Parameters.Add(new ParameterDefinition(\"length\", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));",
-                "il_bar_2.Emit(OpCodes.Newobj, assembly.MainModule.ImportReference(l_spanCtor_4));", "il_bar_2.Emit(OpCodes.Call, m_bar_1);", "il_bar_2.Emit(OpCodes.Ret);",
-            };
-
-        foreach (var expectedLine in expectedLines)
-        {
-            Assert.That(cecilifiedCode, Contains.Substring(expectedLine));
-        }
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               //Bar\(stackalloc int\[1000\]\);
+                                               (?<emit>\s+il_bar_\d+\.Emit\(OpCodes\.)Ldc_I4, 4000\); // 1000 \(elements\) \* 4 \(bytes per element\)
+                                               \k<emit>Conv_U\);
+                                               \k<emit>Localloc\);
+                                               \k<emit>Ldc_I4, 1000\);
+                                               \s+var m_declaringType_4 = assembly.MainModule.ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(.+Int32\);
+                                               \s+var r_tmpMethod_5 = assembly.MainModule.ImportReference\(m_declaringType_4\.ElementType.+Methods\.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 2 && m.Parameters\[0\].ParameterType.IsByReference == false && m.Parameters\[1\].ParameterType.IsByReference == false\)\);
+                                               \s+var r__ctor_6 = new MethodReference\(r_tmpMethod_5.Name, r_tmpMethod_5.ReturnType\)
+                                               \s+{
+                                               \s+HasThis = r_tmpMethod_5.HasThis,
+                                               \s+CallingConvention = r_tmpMethod_5.CallingConvention,
+                                               \s+ExplicitThis = r_tmpMethod_5.ExplicitThis,
+                                               \s+DeclaringType = m_declaringType_4,
+                                               \s+};
+                                               \s+r__ctor_6.Parameters.Add\(.+r_tmpMethod_5.Parameters\[0\].+\);
+                                               \s+r__ctor_6.Parameters.Add\(.+r_tmpMethod_5.Parameters\[1\].+\);
+                                               \k<emit>Newobj, r__ctor_6\);
+                                               """));
     }
 
     [Test]
@@ -117,7 +105,7 @@ public class StackallocTests : CecilifierUnitTestBase
         var result = RunCecilifier(@"using System; class Foo { public static int countField; static void Bar(Span<int> span) {  Bar(stackalloc int[countField]); } }");
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        var expectedLines = new[]
+        /*var expectedLines = new[]
         {
                 "il_bar_3.Emit(OpCodes.Ldsfld, fld_countField_1);", "il_bar_3.Emit(OpCodes.Conv_U);", "il_bar_3.Emit(OpCodes.Sizeof, assembly.MainModule.TypeSystem.Int32);", "il_bar_3.Emit(OpCodes.Mul_Ovf_Un);",
                 "il_bar_3.Emit(OpCodes.Localloc);", "il_bar_3.Emit(OpCodes.Ldfld, fld_countField_1);",
@@ -130,7 +118,29 @@ public class StackallocTests : CecilifierUnitTestBase
         foreach (var expectedLine in expectedLines)
         {
             Assert.That(cecilifiedCode, Contains.Substring(expectedLine));
-        }
+        }*/
+        
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               //Bar\(stackalloc int\[countField\]\);
+                                               (?<emit>\s+il_bar_\d+.Emit\(OpCodes\.)Ldsfld, fld_countField_\d+\);
+                                               \k<emit>Conv_U\);
+                                               \k<emit>Sizeof, assembly.MainModule.TypeSystem.Int32\);
+                                               \k<emit>Mul_Ovf_Un\);
+                                               \k<emit>Localloc\);
+                                               \k<emit>Ldfld, fld_countField_1\);
+                                               \s+var m_declaringType_5 = assembly.MainModule.ImportReference\(.+Span<>.+\).MakeGenericInstanceType\(.+Int32\);
+                                               \s+var r_tmpMethod_6 = assembly.MainModule.ImportReference\(m_declaringType_5.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 2 && m.Parameters\[0\].ParameterType.IsByReference == false && m.Parameters\[1\].ParameterType.IsByReference == false\)\);
+                                               \s+var (?<span_ctor>r__ctor_\d+) = new MethodReference\(r_tmpMethod_6.Name, r_tmpMethod_6.ReturnType\)
+                                               \s+{
+                                               \s+HasThis = r_tmpMethod_6.HasThis,
+                                               \s+CallingConvention = r_tmpMethod_6.CallingConvention,
+                                               \s+ExplicitThis = r_tmpMethod_6.ExplicitThis,
+                                               \s+DeclaringType = m_declaringType_5,
+                                               \s+};
+                                               \s+\k<span_ctor>.Parameters.Add\(new ParameterDefinition\(r_tmpMethod_6.Parameters\[0\].Name,.+\)\);
+                                               \s+\k<span_ctor>.Parameters.Add\(new ParameterDefinition\(r_tmpMethod_6.Parameters\[1\].Name,.+\)\);
+                                               \k<emit>Newobj, \k<span_ctor>\);
+                                               """));
     }
     
     [Test]
@@ -173,11 +183,20 @@ public class StackallocTests : CecilifierUnitTestBase
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        Assert.That(cecilifiedCode, Does.Match(
-            @"var (l_spanCtor_\d+) = new MethodReference\("".ctor"", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference\(typeof\(System\.Span<>\)\).MakeGenericInstanceType\(.+TypeSystem.Int32\)\) { HasThis = true };\s+" +
-            @"\1.Parameters.Add\(.+""ptr"".+assembly.MainModule.TypeSystem.Void.MakePointerType\(\).+\);\s+" +
-            @"\1.Parameters.Add\(.+""length"".+TypeSystem.Int32.+\);\s+" +
-            @"il_M_\d+.Emit\(OpCodes.Newobj, assembly.MainModule.ImportReference\(\1\)\);"));
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               \s+var m_declaringType_10 = .+ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(.+Int32\);
+                                               \s+var r_tmpMethod_11 = .+ImportReference\(m_declaringType_10.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 2 && m.Parameters\[0\].ParameterType.IsByReference == false &&.+\)\);
+                                               \s+var (?<span_ctor>r__ctor_\d+) = new MethodReference\(r_tmpMethod_11.Name, r_tmpMethod_11.ReturnType\)
+                                               \s+{
+                                               \s+HasThis = r_tmpMethod_11.HasThis,
+                                               \s+CallingConvention = r_tmpMethod_11.CallingConvention,
+                                               \s+ExplicitThis = r_tmpMethod_11.ExplicitThis,
+                                               \s+DeclaringType = m_declaringType_10,
+                                               \s+};
+                                               \s+\k<span_ctor>.Parameters.Add\(new ParameterDefinition\(r_tmpMethod_11.Parameters\[0\].Name,.+\)\);
+                                               \s+\k<span_ctor>.Parameters.Add\(new ParameterDefinition\(r_tmpMethod_11.Parameters\[1\].Name,.+\)\);
+                                               \s+il_M_5.Emit\(OpCodes.Newobj, \k<span_ctor>\);
+                                               """));
     }
 
     [Test]
@@ -187,11 +206,25 @@ public class StackallocTests : CecilifierUnitTestBase
         var result = RunCecilifier(code);
         var cecilifiedCode = result.GeneratedCode.ReadToEnd();
 
-        Assert.That(cecilifiedCode, Does.Match(
-            @"var (l_spanCtor_\d+) = new MethodReference\("".ctor"", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference\(typeof\(System\.Span<>\)\).MakeGenericInstanceType\(.+TypeSystem.Int32\)\) { HasThis = true };\s+" +
-            @"\1.Parameters.Add\(.+""ptr"".+assembly.MainModule.TypeSystem.Void.MakePointerType().+\);\s+" +
-            @"\1.Parameters.Add\(.+""length"".+TypeSystem.Int32.+\);\s+" +
-            @"il_M_\d+.Emit\(OpCodes.Newobj, assembly.MainModule.ImportReference\(\1\)\);"));
+        Assert.That(cecilifiedCode, Does.Match("""
+                                               //M2\(stackalloc int\[42\]\)
+                                               (?<emit>\s+il_M_\d+\.Emit\(OpCodes\.)Ldc_I4, 168\); //.+
+                                               \k<emit>Conv_U\);
+                                               \k<emit>Localloc\);
+                                               \k<emit>Ldc_I4, 42\);
+                                               \s+var m_declaringType_6 = .+ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(.+Int32\);
+                                               \s+var r_tmpMethod_7 = .+ImportReference\(m_declaringType_6.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 2 && m.Parameters\[0\].ParameterType.IsByReference == false &&.+\)\);
+                                               \s+var (?<span_ctor>r__ctor_\d+) = new MethodReference\(r_tmpMethod_7.Name, r_tmpMethod_7.ReturnType\)
+                                               \s+{
+                                               \s+HasThis = r_tmpMethod_7.HasThis,
+                                               \s+CallingConvention = r_tmpMethod_7.CallingConvention,
+                                               \s+ExplicitThis = r_tmpMethod_7.ExplicitThis,
+                                               \s+DeclaringType = m_declaringType_6,
+                                               \s+};
+                                               \s+\k<span_ctor>.Parameters.Add\(.+ParameterDefinition\(r_tmpMethod_7.Parameters\[0\].Name,.+\)\);
+                                               \s+\k<span_ctor>.Parameters.Add\(.+ParameterDefinition\(r_tmpMethod_7.Parameters\[1\].Name,.+\)\);
+                                               \k<emit>Newobj, \k<span_ctor>\);
+                                               """));
     }
     
     [TestCase("System.Span<byte>")]

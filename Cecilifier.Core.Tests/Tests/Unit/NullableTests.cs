@@ -68,7 +68,7 @@ public class NullableTests : CecilifierUnitTestBase
         (\s+il_test_\d+\.Emit\(OpCodes\.)Ldarg_0\);
         \1Ldarg_1\);
         \s+var m_declaringType_7 = assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\);
-        \s+var r_tmpMethod_8 = assembly.MainModule.ImportReference\(m_declaringType_7.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1\)\);
+        \s+var r_tmpMethod_8 = assembly.MainModule.ImportReference\(m_declaringType_7.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1 && m.Parameters\[0\].ParameterType.IsByReference == false\)\);
         \s+var r__ctor_9 = new MethodReference\(r_tmpMethod_8.Name, r_tmpMethod_8.ReturnType\)
         \s+{
         \s+HasThis = r_tmpMethod_8.HasThis,
@@ -80,7 +80,7 @@ public class NullableTests : CecilifierUnitTestBase
         \s+il_test_5.Emit\(OpCodes.Newobj, r__ctor_9\);
         \s+il_test_5.Emit\(OpCodes.Call, m_bar_1\);
         \s+var m_declaringType_10 = assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\);
-        \s+var r_tmpMethod_11 = assembly.MainModule.ImportReference\(m_declaringType_10.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1\)\);
+        \s+var r_tmpMethod_11 = assembly.MainModule.ImportReference\(m_declaringType_10.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1 && m.Parameters\[0\].ParameterType.IsByReference == false\)\);
         \s+var r__ctor_12 = new MethodReference\(r_tmpMethod_11.Name, r_tmpMethod_11.ReturnType\)
         \s+{
         \s+HasThis = r_tmpMethod_11.HasThis,
@@ -113,7 +113,7 @@ public class NullableTests : CecilifierUnitTestBase
         //p = 41;
         (\s+il_bar_\d+\.Emit\(OpCodes\.)Ldc_I4, 41\);
         \s+var m_declaringType_4 = .+ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\);
-        \s+var r_tmpMethod_5 = .+ImportReference\(m_declaringType_4.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1\)\);
+        \s+var r_tmpMethod_5 = .+ImportReference\(m_declaringType_4.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1 && m.Parameters\[0\].ParameterType.IsByReference == false\)\);
         \s+var r__ctor_6 = new MethodReference\(r_tmpMethod_5.Name, r_tmpMethod_5.ReturnType\)
         \s+{
         \s+HasThis = r_tmpMethod_5.HasThis,
@@ -144,7 +144,7 @@ public class NullableTests : CecilifierUnitTestBase
                                                                   (?<emit>\s+il_M_\d+\.Emit\(OpCodes\.)Ldarg_0\);
                                                                   \k<emit>Unbox_Any, assembly.MainModule.TypeSystem.Int32\);
                                                                   \s+var m_declaringType_9 = assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(.+Int32\);
-                                                                  \s+var r_tmpMethod_10 = assembly.MainModule.ImportReference\(m_declaringType_9.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1\)\);
+                                                                  \s+var r_tmpMethod_10 = assembly.MainModule.ImportReference\(m_declaringType_9.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1 && m.Parameters\[0\].ParameterType.IsByReference == false\)\);
                                                                   \s+var r__ctor_11 = new MethodReference\(r_tmpMethod_10.Name, r_tmpMethod_10.ReturnType\)
                                                                   \s+{
                                                                   \s+HasThis = r_tmpMethod_10.HasThis,

@@ -133,7 +133,12 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         context.WriteNewLine();
         
         var methodWithIncorrectDeclaringType = context.Naming.SyntheticVariable("tmpMethod", ElementKind.MemberReference);
-        context.Generate($"""var {methodWithIncorrectDeclaringType} = assembly.MainModule.ImportReference({correctDeclaringType}.ElementType.Resolve().Methods.Single(m => m.Name == "{methodName}" && m.Parameters.Count == {parameters.Count}));""");
+        StringBuilder parameterMatcher = new($"m.Parameters.Count == {parameters.Count}");
+        for (var index = 0; index < parameters.Count; index++)
+        {
+            parameterMatcher.Append($" && m.Parameters[{index}].ParameterType.IsByReference == { (parameters[index].RefKind != RefKind.None).ToKeyword() }");
+        }
+        context.Generate($"""var {methodWithIncorrectDeclaringType} = assembly.MainModule.ImportReference({correctDeclaringType}.ElementType.Resolve().Methods.Single(m => m.Name == "{methodName}" && {parameterMatcher}));""");
         context.WriteNewLine();
 
         var variable = context.Naming.SyntheticVariable(methodName, ElementKind.MemberReference);

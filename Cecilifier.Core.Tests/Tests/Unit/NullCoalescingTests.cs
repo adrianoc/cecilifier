@@ -94,7 +94,7 @@ public class NullCoalescingTests : CecilifierUnitTestBase
                        \k<emit>Ldarg_1\);
                        \k<emit>Unbox_Any, assembly.MainModule.TypeSystem.Int32\);
                        \s+var (?<type>m_declaringType_\d+) = assembly.MainModule.ImportReference\(typeof\(System.Nullable<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Int32\);
-                       \s+var (?<ctor>r_tmpMethod_\d+) = assembly.MainModule.ImportReference\(\k<type>.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1\)\);
+                       \s+var (?<ctor>r_tmpMethod_\d+) = assembly.MainModule.ImportReference\(\k<type>.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 1 && m.Parameters\[0\].ParameterType.IsByReference == false\)\);
                        \s+var r__ctor_\d+ = new MethodReference\(\k<ctor>.Name, \k<ctor>.ReturnType\)
                        \s+{
                        \s+HasThis = \k<ctor>.HasThis,
