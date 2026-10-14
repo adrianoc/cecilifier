@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
@@ -17,6 +19,12 @@ namespace Cecilifier.Core.Extensions
         public static CilLocalVariableHandle AsLocalVariable(this string value) => new(value);
         public static CilToken AsToken(this string value) => new(value);
         public static CilToken AsToken(this ResolvedType value) => new(value.Expression);
+        
+        public static string GenericTypeNameFor<T>(this string typeName, IEnumerable<T> typeParameters)
+        {
+            var count = typeParameters.Count();
+            return count > 0 ? $"{typeName}`{count}" : typeName;
+        }
 
         public static int ComputeHashCode(this string[] values)
         {

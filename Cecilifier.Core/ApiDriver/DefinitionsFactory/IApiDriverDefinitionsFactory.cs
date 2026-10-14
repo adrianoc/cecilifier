@@ -32,7 +32,7 @@ public interface IApiDriverDefinitionsFactory
     /// <param name="interfaces"></param>
     /// <param name="ownTypeParameters"></param>
     /// <param name="outerTypeParameters"></param>
-    /// <param name="properties"></param>
+    /// <param name="layoutProperties"></param>
     /// <returns></returns>
     public IEnumerable<string> Type(
         IVisitorContext context,
@@ -44,7 +44,7 @@ public interface IApiDriverDefinitionsFactory
         IEnumerable<ITypeSymbol> interfaces,
         IEnumerable<TypeParameterSyntax>? ownTypeParameters,
         IEnumerable<TypeParameterSyntax> outerTypeParameters,
-        params TypeLayoutProperty[] properties);
+        params TypeLayoutProperty[] layoutProperties);
     
     /// <summary>
     /// Factory method used to emit a synthetic type, i.e. a type that is not defined in the compilation unit.
@@ -58,7 +58,7 @@ public interface IApiDriverDefinitionsFactory
     /// <param name="interfaces"></param>
     /// <param name="ownTypeParameters"></param>
     /// <param name="outerTypeParameters"></param>
-    /// <param name="properties"></param>
+    /// <param name="layoutProperties"></param>
     /// <returns></returns>
     /// <remarks>This </remarks>
     public IEnumerable<string> Type(
@@ -71,7 +71,7 @@ public interface IApiDriverDefinitionsFactory
         IEnumerable<ResolvedType> interfaces,
         IEnumerable<string>? ownTypeParameters,
         IEnumerable<string>? outerTypeParameters,
-        params TypeLayoutProperty[] properties);
+        params TypeLayoutProperty[] layoutProperties);
 
     void UpdateBaseTypeIfNeeded(IVisitorContext context, ITypeSymbol typeSymbol, string typeDefinitionVariable);
     

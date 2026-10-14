@@ -36,13 +36,13 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                                 IEnumerable<ITypeSymbol> interfaces,
                                 IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
                                 IEnumerable<TypeParameterSyntax> outerTypeParameters, 
-                                params TypeLayoutProperty[] properties)
+                                params TypeLayoutProperty[] layoutProperties)
     {
         var typeName = definitionContext.Name;
         var typeVar = definitionContext.DefinitionVariable;
         
         var typeParamList = ownTypeParameters?.ToArray() ?? [];
-        typeName = TypeNameFor(typeName, typeParamList);
+        typeName = typeName.GenericTypeNameFor(typeParamList);
 
         var exps = new List<string>();
         ResolvedType resolvedBaseType = baseType == null || (baseType is INamedTypeSymbol { IsGenericType: true } genericInstance && genericInstance.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter))
@@ -50,9 +50,9 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                 : context.TypeResolver.Resolve(baseType, ResolveTargetKind.TypeReference);
 
         var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(resolvedBaseType != null ? $", {resolvedBaseType}" : "")})";
-        if (properties.Length > 0)
+        if (layoutProperties.Length > 0)
         {
-            exps.Add($"{typeDefExp} {{ {string.Join(',', properties.Select(p => $"{p.Kind} = {p.Value}"))} }};");
+            exps.Add($"{typeDefExp} {{ {string.Join(',', layoutProperties.Select(p => $"{p.Kind} = {p.Value}"))} }};");
         }
         else
         {
@@ -81,9 +81,9 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return exps;
     }
     
-    public IEnumerable<string> Type(IVisitorContext context, MemberDefinitionContext definitionContext, string typeNamespace, string attrs, ResolvedType? baseType, bool isStructWithNoFields, IEnumerable<ResolvedType> interfaces, IEnumerable<string>? ownTypeParameters, IEnumerable<string>? outerTypeParameters, params TypeLayoutProperty[] properties)
+    public IEnumerable<string> Type(IVisitorContext context, MemberDefinitionContext definitionContext, string typeNamespace, string attrs, ResolvedType? baseType, bool isStructWithNoFields, IEnumerable<ResolvedType> interfaces, IEnumerable<string>? ownTypeParameters, IEnumerable<string>? outerTypeParameters, params TypeLayoutProperty[] layoutProperties)
     {
-        List<string> exps = [$"""var {definitionContext.DefinitionVariable} = new TypeDefinition(string.Empty, "{TypeNameFor(definitionContext.Name, ownTypeParameters)}", TypeAttributes.NotPublic | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Sealed, {context.TypeResolver.Bcl.System.ValueType});"""];
+        List<string> exps = [$"""var {definitionContext.DefinitionVariable} = new TypeDefinition(string.Empty, "{definitionContext.Name.GenericTypeNameFor(ownTypeParameters)}", TypeAttributes.NotPublic | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Sealed, {context.TypeResolver.Bcl.System.ValueType});"""];
         foreach (var typeParameterName in ownTypeParameters ?? Array.Empty<string>())
         {
             var typeParameterVar = context.Naming.SyntheticVariable(typeParameterName, ElementKind.GenericParameter);
@@ -693,13 +693,5 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         }
 
         return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
-    }
-
-    private static string TypeNameFor<T>(string typeName, IEnumerable<T>? typeParamList)
-    {
-        var count = typeParamList?.Count();
-        return count > 0 
-            ? $"{typeName}`{count}"
-            : typeName;
     }
 }

@@ -35,11 +35,11 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                         IEnumerable<ITypeSymbol> interfaces,
                         IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
                         IEnumerable<TypeParameterSyntax> outerTypeParameters, 
-                        params TypeLayoutProperty[] properties)
+                        params TypeLayoutProperty[] layoutProperties)
     {
         var typeParameters = (ownTypeParameters ?? []).ToList();
         
-        var fixedTypeName = typeParameters.Count > 0 ? $"{definitionContext.Name}`{typeParameters.Count}": definitionContext.Name;
+        var fixedTypeName = definitionContext.Name.GenericTypeNameFor(typeParameters);
         var typeVar = definitionContext.DefinitionVariable;
         var resolutionScope = definitionContext.ParentDefinitionVariable ?? "mainModuleHandle";
         yield return Format($"""
