@@ -32,10 +32,11 @@ namespace Cecilifier.Core
             var errors = comp.GetDiagnostics()
                                             .Where(d => d.Severity == DiagnosticSeverity.Error)
                                             .Select(CecilifierDiagnostic.FromCompiler)
-                                            .ToArray();
-            if (errors.Length > 0)
+                                            .ToList();
+            if (errors.Count > 0)
             {
-                throw new SyntaxErrorException(errors);
+                var unresolvedTypes = CSharpCompilerDiagnosticParser.UnresolvedTypeNamesFrom(comp.GetDiagnostics());
+                throw new SyntaxErrorException(errors, unresolvedTypes);
             }
 
             var semanticModel = comp.GetSemanticModel(syntaxTree);

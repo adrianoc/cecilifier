@@ -219,7 +219,8 @@ namespace Cecilifier.Web
                     var jsonOptions = new JsonSerializerOptions(JsonSerializerOptions.Default);
                     jsonOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
                     var serializedErrors = JsonSerializer.Serialize(ex.Diagnostics, jsonOptions);
-                    var dataToReturn = Encoding.UTF8.GetBytes($"{{ \"status\" : 1, \"error\": \"Code contains syntax errors\", \"errors\": {serializedErrors} }}").AsMemory();
+                    var unresolvedTypes = JsonSerializer.Serialize(ex.UnresolvedTypes, jsonOptions);
+                    var dataToReturn = Encoding.UTF8.GetBytes($$"""{"status" : 1, "error": "Code contains syntax errors", "errors": {{serializedErrors}}, "unresolvedTypes": {{unresolvedTypes}} }""").AsMemory();
                     await webSocket.SendAsync(dataToReturn, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
                 catch (Exception ex)
