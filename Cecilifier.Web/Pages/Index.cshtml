@@ -82,7 +82,7 @@
                   <button class="button" id="copyToClipboard" onclick="copyToClipboard('copyPastHelper');"><i class="fa fa-copy"></i></button>
                   <button class="button" id="changeSettings" onclick="changeCecilifierSettings();" data-intro="Opens settings page where you can customize Cecilifier's behavior (for instance prefixes used in variable names in the generated code)." data-step="6"><i class="fas fa-sliders-h"></i></button>
                   <button class="button" id="showFixedBugsInStaging" onclick="showListOfFixedIssuesInStagingServer(true);"><i class="fa fa-bug fa-lg"></i></button>
-                  <button class="button" id="assembly_references_button" onclick="ShowAssemblyReferencesDialog('Assembly References', 'ssss');" data-intro="Use this to add (drag and drop) a list of assemblies referenced by the source code (max size per assembly is 8 MB)." data-step="7"><i class="fas fa-database"></i></button>
+                  <button class="button" id="assembly_references_button" onclick="ShowAssemblyReferencesDialog();" data-intro="Use this to add (drag and drop) a list of assemblies referenced by the source code (max size per assembly is 8 MB)." data-step="7"><i class="fas fa-database"></i></button>
                   <button class="button" id="showGuide" onclick="displayTour(true);"><i class="fa-solid fa-signs-post"></i></button>
                   
                   <span id="keyboard-shortcuts">
@@ -160,24 +160,23 @@
             </div>
             
             <div class="modal-body" style="font-size: x-large">
-                Support for System.Reflection.Metadata is under active development and should be considered as experimental with many issues (non exhaustive list):<br/>
+                Support for System.Reflection.Metadata is under active development. AOT Oct/14/2026 System.Reflection.Metadata has almost parity with Mono.Cecil supported features.<br/>
+                The mains missing bits/issues:<br/>
                 <ul>
-                    <li>Generics (types/methods) are not supported yet</li>
-                    <li>Interfaces are not supported yet</li>
-                    <li>Many C# syntaxes/features not implemented</li>
-                    <li>Some C# syntaxes/features will generate code with mixed APIs (Mono.Cecil/System.Reflection.Metadata)</li>
                     <li>Generated code formatting issues</li>
                     <li>Incorrect mapping between code snippet/cecilified code (clicking in lines in one of them will most likely not select the correct corresponding lines) </li>
+                    <li>
+                        Failing tests:
+                        <ul>
+                            <li>TestFunctionPointer("FunctionPointersAsParameters")</li>
+                            <li>AttributeTests</li>
+                            <li>Deconstruct</li>
+                            <li>GenericRefMemberReferences_Issue340</li>
+                            <li>MethodExtensionsTests</li>
+                            <li>TypeResolverTests</li>
+                        </ul>
+                    </li>
                     <li>etc</li>
-                </ul>
-                
-                That said you are more than welcome to try it out and suggest improvements. What is already working:<br/>
-                <ul>
-                    <li>Simple class/structs</li>
-                    <li>Instance/Static fields of primitive/custom types</li>
-                    <li>Instance/Static methods (no overloading)</li>
-                    <li>Custom attributes</li>
-                    <li>Basically anything covered by tests ;) (tests with <b>[TestFixture(typeof(SystemReflectionMetadataContext))]</b>. Note that test fixtures that also have <b>[EnableForContext&lt;SystemReflectionMetadataContext&gt;]</b> applied will only run the tests listed in the ctor of the attribute and an empty list means all tests are disabled (there are multiple tests like that).</li>
                 </ul>
                 
                 <span style="background-color: olivedrab; text-align: center">Before opening issues, please discuss in <a href="https://discord.com/channels/697096451397910548/697096452085907458" target="_blank">our discord server</a>.</span>
