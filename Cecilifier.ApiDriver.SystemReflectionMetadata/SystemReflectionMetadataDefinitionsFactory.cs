@@ -118,10 +118,10 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                 ctx.WriteNewLine();
             }
 
-            if (properties.Length > 0)
+            if (layoutProperties.Length > 0)
             {
-                var packingSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.PackingSize).Value;
-                var clasSize = properties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.ClassSize).Value;
+                var packingSize = layoutProperties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.PackingSize).Value;
+                var clasSize = layoutProperties.SingleOrDefault(p => p.Kind == TypeLayoutPropertyKind.ClassSize).Value;
                 
                 ctx.Generate($"metadata.AddTypeLayout({typeRecord.TypeDefinitionVariable}, {packingSize}, {clasSize});");
                 ctx.WriteNewLine();

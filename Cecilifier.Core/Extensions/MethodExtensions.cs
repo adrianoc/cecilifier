@@ -58,7 +58,7 @@ namespace Cecilifier.Core.Extensions
         {
             return new MethodDefinitionVariable(
                 methodKind,
-                method.ContainingType.ToDisplayString(),
+                method.ContainingType?.ToDisplayString(),
                 method.Name,
                 method.Parameters.Select(p => p.Type.ToDisplayString()).ToArray(),
                 method.TypeParameters.Select(tp => tp.Name).ToArray(),
