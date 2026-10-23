@@ -22,32 +22,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         }
         else
         {
-            var methodSignatureVariableToFind = method.AsMethodDefinitionVariable(VariableMemberKind.MethodSignature);
-
-            var methodSignatureVarName = context.Naming.SyntheticVariable($"{method.Name}Signature", ElementKind.MemberReference);
-            var methodSignatureVar = FindOrRegisterVariable(context, method, methodSignatureVariableToFind, methodSignatureVarName, null!, static (ctx, method, methodSignatureVarName, _) =>
-            {
-                var isInstanceMethod = !method.IsStatic && method.MethodKind != MethodKind.LocalFunction; // local functions are always declared as static (we don't support capturing variables)
-                var methodSignatureBlobVar = ctx.Naming.SyntheticVariable($"{method.ToValidVariableName()}BlobBuilder", ElementKind.MemberReference);
-
-                ctx.Generate($$"""
-                                   var {{methodSignatureBlobVar}} = new BlobBuilder();
-
-                                   new BlobEncoder({{methodSignatureBlobVar}}).
-                                       MethodSignature(isInstanceMethod: {{isInstanceMethod.ToKeyword()}}, genericParameterCount: {{method.TypeArguments.Length}}).
-                                       Parameters({{method.Parameters.Length}},
-                                           returnType => returnType.{{ctx.TypedTypeResolver.Resolve(method.OriginalDefinition.ReturnType, method.ToTypeResolutionContext())}},
-                                           parameters =>
-                                           {
-                                               {{
-                                                   string.Join('\n', method.OriginalDefinition.Parameters.Select(p => ParameterExpressionFor(ctx, p)))}}
-                                           });
-
-                                   var {{methodSignatureVarName}} = metadata.GetOrAddBlob({{methodSignatureBlobVar}});
-                                   """);
-                ctx.WriteNewLine();
-            });
-
+            var methodSignatureVar = TypeSystemHelpers.NewMethodSignature(context, method);
             var containingTypeRefVar = context.TypeResolver.Resolve(method.ContainingType, ResolveTargetKind.TypeReference);
             context.Generate($$"""
                                var {{methodRefVar}} = metadata.AddMemberReference(
@@ -63,7 +38,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         if (method.IsGenericMethod && (!method.IsDefinition || method.IsDefinedInCurrentAssembly(context)))
         {
             var tbf = method.AsRawMethodDefinitionVariable(VariableMemberKind.MethodInstantiation);
-            var instantiationVar = FindOrRegisterVariable(context, method, tbf, context.Naming.GenericInstance(method), methodRefVar, static (ctx, method, methodSpecificationVar, openMethodVar) =>
+            var instantiationVar = TypeSystemHelpers.FindOrRegisterVariable(context, method, tbf, context.Naming.GenericInstance(method), methodRefVar, static (ctx, method, methodSpecificationVar, openMethodVar) =>
             {
                 ctx.Generate($$"""
                                    MethodSpecificationHandle {{methodSpecificationVar}}; 
@@ -190,7 +165,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
     {
         var tbf = new MethodDefinitionVariable(VariableMemberKind.MethodInstantiation, "parent?", methodName, [], resolvedTypeArguments.Select(rt => rt.Expression).ToArray());
         var methodVariableName = context.Naming.SyntheticVariable(methodName, ElementKind.GenericInstance);
-        var instantiationVar = FindOrRegisterVariable(context, resolvedTypeArguments, tbf, methodVariableName, methodReferenceVariable, static (ctx, typeArguments, methodSpecificationVar, openMethodVar) =>
+        var instantiationVar = TypeSystemHelpers.FindOrRegisterVariable(context, resolvedTypeArguments, tbf, methodVariableName, methodReferenceVariable, static (ctx, typeArguments, methodSpecificationVar, openMethodVar) =>
         {
             ctx.Generate($$"""
                            MethodSpecificationHandle {{methodSpecificationVar}}; 
@@ -224,36 +199,8 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
     }
 
     #region Non public members
-    private static DefinitionVariable FindOrRegisterVariable<TTypeArgumentsState>(SystemReflectionMetadataContext context, TTypeArgumentsState typeArgumentsState, MethodDefinitionVariable tbf, string variableNameToRegister, string openMethodVar, Action<SystemReflectionMetadataContext, TTypeArgumentsState, string, string> action)
-    {
-        var instantiationVar = context.DefinitionVariables.GetMethodVariable(tbf);
-        if (!instantiationVar.IsValid)
-        {
-            action(context, typeArgumentsState, variableNameToRegister, openMethodVar);
-            instantiationVar = context.DefinitionVariables.RegisterMethod(tbf.WithVariableName(variableNameToRegister));
-        }
-
-        return instantiationVar;
-    }
-    
-    private static TypeResolutionOptions TypeResolutionOptionsFor(IParameterSymbol parameter)
-    {
-        var byRefState= parameter.RefKind != RefKind.None 
-            ? TypeResolutionOptions.IsByRef 
-            : TypeResolutionOptions.None;
-            
-        return (parameter.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None) | byRefState;
-    }
-    
-    private static string ParameterExpressionFor(SystemReflectionMetadataContext ctx, IParameterSymbol p)
-    {
-        var resolvedParameterType = ctx.TypedTypeResolver.Resolve(p.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, TypeResolutionOptionsFor(p)));
-        return p.HasExplicitDefaultValue 
-            ? $"""metadata.AddConstant(parameters.AddParameter().{resolvedParameterType}, {p.ExplicitDefaultValue});""" 
-            : $"""parameters.AddParameter().{resolvedParameterType};""";
-    }
     
     private static string ParameterExpressionFor(SystemReflectionMetadataContext context, ParameterSpec p) => $"""parameters.AddParameter().{p.ElementTypeResolver?.Invoke(context, p) ?? p.ElementType.Expression};""";
-
+    
     #endregion
 }

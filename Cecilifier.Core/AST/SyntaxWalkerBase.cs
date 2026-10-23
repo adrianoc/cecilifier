@@ -653,7 +653,7 @@ namespace Cecilifier.Core.AST
 
             if (typeSymbol is IFunctionPointerTypeSymbol functionPointer)
             {
-                var operand = CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer);
+                var operand = Context.TypeResolver.MakeStandaloneSignature(functionPointer);
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Calli, operand.AsToken());
                 return;
             }

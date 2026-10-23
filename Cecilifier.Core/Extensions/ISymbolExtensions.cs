@@ -72,6 +72,7 @@ namespace Cecilifier.Core.Extensions
             {
                 IMethodSymbol { MethodKind: MethodKind.Conversion} method => method.ReturnType.ToDisplayString(ValidVariableNameFormat),
                 IMethodSymbol { MethodKind: MethodKind.UserDefinedOperator} method => method.Name,
+                IMethodSymbol { MethodKind: MethodKind.FunctionPointerSignature} method => $"functionPointer_{Math.Abs(method.ToDisplayString().GetHashCode())}",
                 IMethodSymbol method => method.ToDisplayString(ValidVariableNameFormat),
                 _ => symbol.ToDisplayString(ValidVariableNameFormat)
             };

@@ -1429,7 +1429,7 @@ namespace Cecilifier.Core.AST
             if (firstParentNotPartOfName is PrefixUnaryExpressionSyntax unaryPrefix && unaryPrefix.IsKind(SyntaxKind.AddressOfExpression))
             {
                 string operand = method.MethodResolverExpression(Context);
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldftn, operand);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldftn, operand.AsToken());
                 return;
             }
 

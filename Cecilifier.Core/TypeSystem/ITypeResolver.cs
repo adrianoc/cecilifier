@@ -36,6 +36,8 @@ public interface ITypeResolver
     ResolvedType MakeGenericInstanceType(string typeName, ResolvedType openGenericType, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext);
     ResolvedType MakeGenericInstanceType(string typeName, ResolvedType openGenericType, Span<ResolvedType> typeArguments, in TypeResolutionContext resolutionContext);
     ResolvedType MakeByRefType(in ResolvedType resolvedType);
+    
+    ResolvedType MakeStandaloneSignature(IFunctionPointerTypeSymbol method);
 
     Bcl Bcl { get; }
 }

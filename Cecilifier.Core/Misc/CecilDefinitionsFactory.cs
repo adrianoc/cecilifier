@@ -19,37 +19,10 @@ namespace Cecilifier.Core.Misc
 {
     public sealed class CecilDefinitionsFactory
     {
-        public static string CallSite(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer)
-        {
-            return FunctionPointerTypeBasedCecilType(
-                resolver,
-                functionPointer,
-                (hasThis, parameters, returnType) => $"new CallSite({returnType}) {{ {hasThis}, {parameters} }}");
-        }
-
-        public static string FunctionPointerType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer)
-        {
-            return FunctionPointerTypeBasedCecilType(
-                resolver,
-                functionPointer,
-                (hasThis, parameters, returnType) => $"new FunctionPointerType() {{ {hasThis}, ReturnType = {returnType}, {parameters} }}");
-        }
-
         public static string GenericParameter(IVisitorContext context, string ownerContainingTypeName, string typeParameterOwnerVar, string genericParamName, string genParamDefVar)
         {
             context.DefinitionVariables.RegisterNonMethod(ownerContainingTypeName, genericParamName, VariableMemberKind.TypeParameter, genParamDefVar);
             return $"var {genParamDefVar} = new Mono.Cecil.GenericParameter(\"{genericParamName}\", {typeParameterOwnerVar});";
-        }
-
-        public static string ParameterDoesNotHandleParamsKeywordOrDefaultValue(ITypeResolver resolver, string name, RefKind byRef, ResolvedType resolvedType, string? paramAttributes = null)
-        {
-            paramAttributes ??= Constants.ParameterAttributes.None;
-            if (RefKind.None != byRef)
-            {
-                resolvedType = resolver.MakeByRefType(resolvedType);
-            }
-
-            return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
         }
 
         public static IEnumerable<string> Parameter(IVisitorContext context, ParameterSyntax node, string methodVar, string paramVar)
@@ -72,13 +45,6 @@ namespace Cecilifier.Core.Misc
                 TypeKind.Enum => string.Empty,
                 _ => throw new Exception("Not supported type declaration: " + typeKind)
             };
-        }
-
-        private static string FunctionPointerTypeBasedCecilType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer, Func<string, string, ResolvedType, string> factory)
-        {
-            var parameters = $"Parameters={{ {string.Join(',', functionPointer.Signature.Parameters.Select(p => ParameterDoesNotHandleParamsKeywordOrDefaultValue(resolver, p.Name, p.RefKind, resolver.Resolve(p.Type, ResolveTargetKind.Parameter))))} }}";
-            var returnType = resolver.Resolve(functionPointer.Signature.ReturnType, ResolveTargetKind.ReturnType);
-            return factory("HasThis = false", parameters, returnType);
         }
 
         public static class Collections

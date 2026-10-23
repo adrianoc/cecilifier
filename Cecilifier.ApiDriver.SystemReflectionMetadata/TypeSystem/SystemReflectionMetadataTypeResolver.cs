@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text;
 using Cecilifier.Core;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
@@ -304,9 +305,27 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
     protected override ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer, in TypeResolutionContext resolutionContext)
     {
-        throw new NotImplementedException();
+        return $$"""
+                Type().FunctionPointer(SignatureCallingConvention.Default, FunctionPointerAttributes.None, {{functionPointer.Signature.TypeParameters.Length}}).Parameters(
+                        {{functionPointer.Signature.Parameters.Length}},
+                        returnEncoder => returnEncoder.{{_context.TypeResolver.Resolve(functionPointer.Signature.ReturnType, functionPointer.Signature.ReturnType.NewTypeResolutionContextFor(ResolveTargetKind.ReturnType))}},
+                        parameterEncoder => { {{ string.Join("", functionPointer.Signature.Parameters.Select(p => TypeSystemHelpers.ParameterExpressionFor(_context, p))) }} }
+                );
+                """;
     }
-    
+
+    public override ResolvedType MakeStandaloneSignature(IFunctionPointerTypeSymbol type)
+    { 
+        var variable = TypeSystemHelpers.NewMethodSignature(_context, type.Signature);
+        variable.ThrowIfVariableIsNotValid();
+        
+        var standaloneSignatureVariable = _context.Naming.SyntheticVariable("signature", ElementKind.MemberReference);
+
+        _context.Generate($"var {standaloneSignatureVariable} = metadata.AddStandaloneSignature({variable.VariableName});");
+        _context.WriteNewLine();
+        return standaloneSignatureVariable;
+    }
+
     public override ResolvedType MakeByRefType(in ResolvedType resolvedType) => resolvedType; // noop in SRM. ByRef types are handled during type resolution.
     
     private static string TypeEncoderFor(in TypeResolutionContext resolutionContext)
