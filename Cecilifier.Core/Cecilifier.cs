@@ -11,7 +11,7 @@ namespace Cecilifier.Core
 {
     public sealed class Cecilifier
     {
-        private const LanguageVersion CurrentLanguageVersion = LanguageVersion.CSharp13;
+        private const LanguageVersion CurrentLanguageVersion = LanguageVersion.CSharp14;
         public static readonly int SupportedCSharpVersion = int.Parse(CurrentLanguageVersion.ToString().Substring("CSharp".Length));
 
         public static CecilifierResult Process<TContext>(Stream content, CecilifierOptions options) where TContext : IVisitorContext

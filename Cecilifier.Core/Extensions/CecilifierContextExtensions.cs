@@ -60,6 +60,15 @@ public static class CecilifierContextExtensions
         {
             EmitNewobjOpcodeFor(context, in ilVar, coalesce.Type);
         }
+        else if (operation is IConversionOperation { IsImplicit: true } && operation.ChildOperations.ElementAtOrDefault(0)?.Kind != OperationKind.Coalesce)
+        {
+            var convertedFromType = context.SemanticModel.GetTypeInfo(operation.Syntax).Type;
+            var implicitOperatorMethod = operation.Type?.GetMembers("op_Implicit").Cast<IMethodSymbol>().SingleOrDefault(op => SymbolEqualityComparer.Default.Equals(op.Parameters[0].Type, convertedFromType));
+            if (implicitOperatorMethod == null)
+                return false;
+            
+            context.AddCallToMethod(implicitOperatorMethod, ilVar);
+        }
         else
             return false;
 
