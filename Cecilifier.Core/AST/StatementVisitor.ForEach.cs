@@ -1,6 +1,5 @@
 using System.Linq;
 using System.Reflection.Emit;
-using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -100,19 +99,19 @@ namespace Cecilifier.Core.AST
         {
             if (forEachHandlerContext.GetEnumeratorMethod.ReturnType.IsValueType || forEachHandlerContext.GetEnumeratorMethod.ReturnType.TypeKind == TypeKind.TypeParameter)
             {
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, forEachHandlerContext.EnumeratorVariableName);
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(forEachHandlerContext.GetEnumeratorMethod.ReturnType, ResolveTargetKind.Instruction));
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloca, forEachHandlerContext.EnumeratorVariableName.AsLocalVariable());
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Constrained, Context.TypeResolver.Resolve(forEachHandlerContext.GetEnumeratorMethod.ReturnType, ResolveTargetKind.Instruction).AsToken());
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context).AsToken());
             }
             else
             {
-                var skipDisposeMethodCallNopVar = CreateCilInstruction(_ilVar, OpCodes.Nop);
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, forEachHandlerContext.EnumeratorVariableName);
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Brfalse_S, skipDisposeMethodCallNopVar);
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, forEachHandlerContext.EnumeratorVariableName);
+                var skipDisposeMethodCallTarget = Context.Naming.Label("skipDisposeTarget");
+                Context.ApiDriver.DefineLabel(Context, _ilVar, skipDisposeMethodCallTarget);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, forEachHandlerContext.EnumeratorVariableName.AsLocalVariable());
+                Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Brfalse_S, skipDisposeMethodCallTarget);
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, forEachHandlerContext.EnumeratorVariableName.AsLocalVariable());
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
-                //TODO: Mono.Cecil specific
-                AddCecilExpression($"{_ilVar.VariableName}.Append({skipDisposeMethodCallNopVar});");
+                Context.ApiDriver.MarkLabel(Context, _ilVar, skipDisposeMethodCallTarget);
             }
         }
 
@@ -131,11 +130,11 @@ namespace Cecilifier.Core.AST
             var forEachLoopBegin = AddCilInstructionWithLocalVariable(_ilVar, OpCodes.Nop);
 
             var loadOpCode = forEachHandlerContext.GetEnumeratorMethod.ReturnType.IsValueType || forEachHandlerContext.GetEnumeratorMethod.ReturnType.TypeKind == TypeKind.TypeParameter ? OpCodes.Ldloca : OpCodes.Ldloc;
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName.AsLocalVariable());
             Context.AddCallToMethod(forEachHandlerContext.EnumeratorMoveNextMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
             Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Brfalse, endOfLoopLabelVar);
             
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, loadOpCode, forEachHandlerContext.EnumeratorVariableName.AsToken());
             Context.AddCallToMethod(forEachHandlerContext.EnumeratorCurrentProperty.GetMethod, _ilVar, MethodDispatchInformation.MostLikelyVirtual);
 
             if (!node.Type.IsKind(SyntaxKind.RefType) && forEachHandlerContext.EnumeratorCurrentProperty.IsByRef())
@@ -143,7 +142,7 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, forEachHandlerContext.EnumeratorCurrentProperty.Type.LdindOpCodeFor());
             }
             
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, new CilLocalVariableHandle(foreachCurrentValueVarName));
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stloc, foreachCurrentValueVarName.AsLocalVariable());
 
             // process body of foreach
             Context.WriteNewLine();
