@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
@@ -19,7 +18,6 @@ namespace Cecilifier.Core.Tests.Tests.Unit;
 [TestFixture(typeof(MonoCecilContext))]
 [TestFixture(typeof(SystemReflectionMetadataContext))]
 [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not Supported")]
-
 internal class MethodExtensionsTests<TContext> : CecilifierContextBasedTestBase<TContext> where TContext: IVisitorContext
 {
     protected override string Snippet => """
