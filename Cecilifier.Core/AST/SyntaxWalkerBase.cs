@@ -44,7 +44,7 @@ namespace Cecilifier.Core.AST
         protected void AddCilInstruction(IlContext ilVar, OpCode opCode, ITypeSymbol type)
         {
             var operand = Context.TypeResolver.Resolve(type, new TypeResolutionContext(ResolveTargetKind.Instruction, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, new CilToken(operand.Expression));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, operand.Expression.AsToken());
         }
 
         protected string AddCilInstructionWithLocalVariable(IlContext ilVar, OpCode opCode)

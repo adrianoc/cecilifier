@@ -18,12 +18,12 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("IndexerOverloads")]
         [TestCase("PropertyAccessors")]
         [ParameterizedResourceFilter<SystemReflectionMetadataContext>("SimpleProperty", "SimpleAutoProperty", "SimpleStaticProperty", "PropertyAccessors", "Indexer", IgnoreReason = "WIP")]
-        public void TestProperties(string testName, string ignoredILErrors = null)
+        public void TestProperties(string testName)
         {
             AssertResourceTest(new CecilifyTestOptions
             {
                 ResourceName = $"Members/Properties/{testName}", 
-                IgnoredILErrors = ignoredILErrors
+                IgnoredILErrors = null
             });
         }
     }

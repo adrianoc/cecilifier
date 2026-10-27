@@ -82,25 +82,26 @@ internal struct AttributeEncoder
         else
         {
             encoded.AppendLine("// Attribute, named arguments");
-            encoded.AppendLine($"var nae = {namedArgumentsEncoderVariableName}.Count({namedArguments.Count});");
+            var namedArgumentEncoderVariableName = _context.Naming.SyntheticVariable("nae", ElementKind.None);
+            encoded.AppendLine($"var {namedArgumentEncoderVariableName} = {namedArgumentsEncoderVariableName}.Count({namedArguments.Count});");
             foreach (var namedArgument in namedArguments)
             {
-                EncodeNamedArgument(namedArgument, encoded, "typeEncoder", "literalEncoder");
+                EncodeNamedArgument(namedArgumentEncoderVariableName, namedArgument, encoded, "typeEncoder", "literalEncoder");
             }
         }
     }
 
-    private void EncodeNamedArgument(CustomAttributeNamedArgument namedArgument, StringBuilder encoded, string typeEncoder, string literalEncoder)
+    private void EncodeNamedArgument(string encoderVariableName, CustomAttributeNamedArgument namedArgument, StringBuilder encoded, string typeEncoder, string literalEncoder)
     {
         encoded.AppendLine($"// Named argument: {namedArgument.Name}");
         if (namedArgument.Values == null)
-            EncodeNamedArgumentScalar(namedArgument, encoded);
+            EncodeNamedArgumentScalar(encoderVariableName, namedArgument, encoded);
         else
-            EncodeNamedArgumentArray(namedArgument, encoded);
+            EncodeNamedArgumentArray(encoderVariableName, namedArgument, encoded);
         encoded.AppendLine();
     }
 
-    private void EncodeNamedArgumentArray(CustomAttributeNamedArgument namedArgument, StringBuilder encoded)
+    private void EncodeNamedArgumentArray(string encoderVariableName, CustomAttributeNamedArgument namedArgument, StringBuilder encoded)
     {
         const string AvoidRedeclarationOfVars = "NamedArgumentEncoderVarsAlreadyDeclared";
         var varOrEmpty = string.Empty;
@@ -110,7 +111,7 @@ internal struct AttributeEncoder
             _context.SetFlag(AvoidRedeclarationOfVars);
         }
 
-        encoded.AppendLine($"""nae.AddArgument(isField: {(namedArgument.Kind == NamedArgumentKind.Field).ToKeyword()}, out {varOrEmpty}typeEncoder, out {varOrEmpty}nameEncoder, out {varOrEmpty}literalEncoder);""");
+        encoded.AppendLine($"""{encoderVariableName}.AddArgument(isField: {(namedArgument.Kind == NamedArgumentKind.Field).ToKeyword()}, out {varOrEmpty}typeEncoder, out {varOrEmpty}nameEncoder, out {varOrEmpty}literalEncoder);""");
         encoded.AppendLine($"""typeEncoder.{namedArgument.ResolvedType};""");
         encoded.AppendLine($"""nameEncoder.Name("{namedArgument.Name}");""");
         
@@ -122,10 +123,10 @@ internal struct AttributeEncoder
         }
     }
 
-    private void EncodeNamedArgumentScalar(CustomAttributeNamedArgument namedArgument, StringBuilder encoded)
+    private void EncodeNamedArgumentScalar(string encoderVariableName, CustomAttributeNamedArgument namedArgument, StringBuilder encoded)
     {
         encoded.AppendLine($"""
-                            nae.AddArgument(isField: {(namedArgument.Kind == NamedArgumentKind.Field).ToKeyword()}, 
+                            {encoderVariableName}.AddArgument(isField: {(namedArgument.Kind == NamedArgumentKind.Field).ToKeyword()}, 
                                     typeEncoder => typeEncoder.{namedArgument.ResolvedType}, 
                                     nameEncoder => nameEncoder.Name("{namedArgument.Name}"), 
                                     literalEncoder => literalEncoder.{ScalarExpressionFor(namedArgument)});

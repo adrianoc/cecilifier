@@ -131,7 +131,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (!resolved)
             return resolved;
 
-        if (context.TargetKind == ResolveTargetKind.Instruction)
+        if (context.TargetKind == ResolveTargetKind.Instruction && type.TypeKind != TypeKind.TypeParameter)
         {
             return new ResolvedType($"MetadataTokens.GetToken({resolved})");
         }

@@ -38,7 +38,7 @@ internal class ArrayExpandedParamsArgumentHandler : ExpandedParamsArgumentHandle
                 
         if (argumentIndex == FirstArgumentIndex)
         {
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, _backingVariableName);
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloc, _backingVariableName.AsLocalVariable());
         }
                 
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Dup);

@@ -25,4 +25,12 @@ public class CustomAttributeArgument
     }
     
     public CustomAttributeArgument[]? Values { get; private set; }
+
+    public override int GetHashCode()
+    {
+        if (_value != null)
+            return _value.GetHashCode();
+        
+        return Values?.Select(v => v.Value?.GetHashCode() ?? 0).Sum() ?? 0;
+    }
 }

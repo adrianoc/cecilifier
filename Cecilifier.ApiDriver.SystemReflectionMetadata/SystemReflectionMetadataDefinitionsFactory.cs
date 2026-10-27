@@ -653,7 +653,9 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, VariableMemberKind targetKind, params CustomAttributeArgument[] arguments)
     {
-        var attributeEncoderVariable = context.DefinitionVariables.GetVariable("EncoderMetaName", VariableMemberKind.None, attributeVarBaseName);
+        // to ensure the relationship of one attribute encoder per attribute ctor we register one variable per encoder (using a synthetic member name that includes the ctor args/properties/fields)
+        var syntheticMemberName = $"EncoderName{arguments.Select(arg => arg.GetHashCode()).Aggregate(0, (acc, curr) => acc ^ curr * 327)}";
+        var attributeEncoderVariable = context.DefinitionVariables.GetVariable(syntheticMemberName, VariableMemberKind.None, attributeVarBaseName);
         if (!attributeEncoderVariable.IsValid)
         {
             var attributeEncoderVariableName = context.Naming.SyntheticVariable($"{attributeVarBaseName}_blobEncoder", ElementKind.MemberReference);
@@ -665,7 +667,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
                              { encodedArguments }
                              """);
 
-            attributeEncoderVariable = context.DefinitionVariables.RegisterNonMethod(attributeVarBaseName, "EncoderMetaName", VariableMemberKind.None, attributeEncoderVariableName);
+            attributeEncoderVariable = context.DefinitionVariables.RegisterNonMethod(attributeVarBaseName, syntheticMemberName, VariableMemberKind.None, attributeEncoderVariableName);
         }
         
         var resolvedAttrCtor = context.MemberResolver.ResolveMethod(attributeCtor);

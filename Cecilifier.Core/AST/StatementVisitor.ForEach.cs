@@ -110,7 +110,7 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, forEachHandlerContext.EnumeratorVariableName.AsLocalVariable());
                 Context.ApiDriver.WriteCilBranch(Context, _ilVar, OpCodes.Brfalse_S, skipDisposeMethodCallTarget);
                 Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldloc, forEachHandlerContext.EnumeratorVariableName.AsLocalVariable());
-                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context));
+                Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Callvirt, Context.RoslynTypeSystem.SystemIDisposable.GetMembers("Dispose").OfType<IMethodSymbol>().Single().MethodResolverExpression(Context).AsToken());
                 Context.ApiDriver.MarkLabel(Context, _ilVar, skipDisposeMethodCallTarget);
             }
         }

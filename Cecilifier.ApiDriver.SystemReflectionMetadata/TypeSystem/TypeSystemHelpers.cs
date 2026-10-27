@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
@@ -20,13 +21,23 @@ public static class TypeSystemHelpers
                                    && method.MethodKind != MethodKind.FunctionPointerSignature; // Function pointers are always static
             var methodSignatureBlobVar = ctx.Naming.SyntheticVariable($"{method.ToValidVariableName()}BlobBuilder", ElementKind.MemberReference);
 
+            var requiredModifierOrEmpty = string.Empty;
+            if (method.ReturnsByRefReadonly || method.OriginalDefinition.ReturnsByRefReadonly)
+            {
+                var inAttributeVariable = ctx.TypedTypeResolver.Resolve(ctx.RoslynTypeSystem.ForType(typeof(InAttribute).FullName!), ResolveTargetKind.TypeReference);
+                requiredModifierOrEmpty = $"returnEncoder.CustomModifiers().AddModifier({inAttributeVariable}, isOptional: false);\n";
+            }
+
             ctx.Generate($$"""
                            var {{methodSignatureBlobVar}} = new BlobBuilder();
 
                            new BlobEncoder({{methodSignatureBlobVar}}).
                                MethodSignature(isInstanceMethod: {{isInstanceMethod.ToKeyword()}}, genericParameterCount: {{method.TypeArguments.Length}}).
                                Parameters({{method.Parameters.Length}},
-                                   returnEncoder => returnEncoder.{{ctx.TypedTypeResolver.Resolve(method.OriginalDefinition.ReturnType, method.ToTypeResolutionContext())}},
+                                   returnEncoder => 
+                                   {
+                                       {{requiredModifierOrEmpty}}returnEncoder.{{ctx.TypedTypeResolver.Resolve(method.OriginalDefinition.ReturnType, method.ToTypeResolutionContext())}};
+                                   },
                                    parameterEncoder =>
                                    {
                                        {{

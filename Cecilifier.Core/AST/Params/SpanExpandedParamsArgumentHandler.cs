@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Reflection.Emit;
+using Cecilifier.Core.ApiDriver.Handles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Cecilifier.Core.CodeGeneration;
@@ -16,6 +17,7 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
     private readonly string _inlineArrayVariableName;
     private readonly OpCode _stindOpCode;
     private readonly ResolvedType _inlineArrayType;
+    private readonly ResolvedType _inlineArrayTypeAsGenericParameter;
     private readonly ITypeSymbol _paramsParameterType;
 
     public SpanExpandedParamsArgumentHandler(IVisitorContext context, IParameterSymbol paramsParameter, ArgumentListSyntax argumentList, IlContext ilVar) : base(context, paramsParameter, argumentList, ilVar)
@@ -24,18 +26,21 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
         _stindOpCode = _paramsParameterType.StindOpCodeFor();
         
         var (openInlineArrayType, _) = InlineArrayGenerator.GetOrGenerateInlineArrayType(context, argumentList.Arguments.Count, "InlineArray to store the `params` values.");
-        _inlineArrayType = openInlineArrayType.MakeGenericInstanceType([context.TypeResolver.Resolve(_paramsParameterType, ResolveTargetKind.None)]);
+        
+        _inlineArrayType = context.TypeResolver.MakeGenericInstanceType("typeName???", openInlineArrayType,  [context.TypeResolver.Resolve(_paramsParameterType, ResolveTargetKind.None)], new TypeResolutionContext(ResolveTargetKind.Instruction, TypeResolutionOptions.IsValueType));
+        _inlineArrayTypeAsGenericParameter = context.TypeResolver.MakeGenericInstanceType("typeName???", openInlineArrayType,  [context.TypeResolver.Resolve(_paramsParameterType, ResolveTargetKind.None)], new TypeResolutionContext(ResolveTargetKind.GenericTypeArgument, TypeResolutionOptions.IsValueType));
+        var inlineArrayTypeForLocalVariables = context.TypeResolver.MakeGenericInstanceType("typeName???", openInlineArrayType,  [context.TypeResolver.Resolve(_paramsParameterType, ResolveTargetKind.None)], new TypeResolutionContext(ResolveTargetKind.LocalVariable, TypeResolutionOptions.IsValueType));
 
-        var inlineArrayBuffer = context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Arg", _inlineArrayType);
+        var inlineArrayBuffer = context.AddLocalVariableToCurrentMethod($"{paramsParameter.Name}Arg", inlineArrayTypeForLocalVariables);
         _inlineArrayVariableName = inlineArrayBuffer.VariableName;
         
-        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldloca_S, _inlineArrayVariableName);
-        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Initobj, _inlineArrayType);
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Ldloca_S, _inlineArrayVariableName.AsLocalVariable());
+        context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Initobj, _inlineArrayType.AsToken());
     }
 
     internal override void PreProcessArgument(ArgumentSyntax argument)
     {
-        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, _inlineArrayVariableName);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, _inlineArrayVariableName.AsLocalVariable());
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, _currentIndex++);
         var openInlineArrayElementRefMethod = PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayElementRefMethod(Context);
 
@@ -49,7 +54,7 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
 
     public override void PostProcessArgumentList(ArgumentListSyntax argumentList)
     {
-        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, _inlineArrayVariableName);
+        Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, _inlineArrayVariableName.AsLocalVariable());
         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldc_I4, ElementCount);
         
         // gets a Span<T> from the inline array
@@ -58,9 +63,9 @@ internal class SpanExpandedParamsArgumentHandler : ExpandedParamsArgumentHandler
 
     protected virtual DefinitionVariable GetInlineArrayToSpanResolvedMethod() => PrivateImplementationDetailsGenerator.GetOrEmmitInlineArrayAsSpanMethod(Context);
     
-    string MakeGenericInstanceMethod(DefinitionVariable genericMethodVariable)
+    CilToken MakeGenericInstanceMethod(DefinitionVariable genericMethodVariable)
     {
-        IReadOnlyList<ResolvedType> resolvedTypeArguments = [ _inlineArrayType, Context.TypeResolver.Resolve(_paramsParameterType, ResolveTargetKind.TypeReference)];
-        return Context.MemberResolver.MakeGeneticInstanceMethod(genericMethodVariable.VariableName, genericMethodVariable.MemberName, resolvedTypeArguments);
+        IReadOnlyList<ResolvedType> resolvedTypeArguments = [ _inlineArrayTypeAsGenericParameter, Context.TypeResolver.Resolve(_paramsParameterType, ResolveTargetKind.GenericTypeArgument)];
+        return Context.MemberResolver.MakeGeneticInstanceMethod(genericMethodVariable.VariableName, genericMethodVariable.MemberName, resolvedTypeArguments).AsToken();
     }
 }
