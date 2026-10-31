@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Text;
 using Cecilifier.Core;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
@@ -44,6 +43,9 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
     protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
+        if (resolutionContext.TargetKind == ResolveTargetKind.AttributeNamedArgument)
+            return "ScalarType().SystemType()";
+        
         var memberRefVarName = _context.Naming.SyntheticVariable(type.ToValidVariableName(), ElementKind.MemberReference);
         
         var assemblyReferenceName = _context.AssemblyResolver.Resolve(_context, type.ContainingAssembly);
@@ -82,6 +84,10 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return "Void()";
         }
 
+        if (SymbolEqualityComparer.Default.Equals(_context.RoslynTypeSystem.SystemType, type) 
+            && resolutionContext.TargetKind == ResolveTargetKind.AttributeNamedArgument || resolutionContext.TargetKind == ResolveTargetKind.AttributeArgument)
+            return $""".SystemType("{type.FullyQualifiedName()}")""";
+        
         var resolvedTypeDetails = new ResolvedTypeDetails();
         if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String || type.SpecialType == SpecialType.System_Object || type.SpecialType == SpecialType.System_IntPtr)
             return ResolvedType.FromDetails(
@@ -340,7 +346,8 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             ResolveTargetKind.GenericTypeArgument => "",
             ResolveTargetKind.GenericTypeParameterConstraint => "",
             ResolveTargetKind.ComposedElementType => "",
-            ResolveTargetKind.AttributeNamedArgument or ResolveTargetKind.AttributeArgument => "ScalarType()%",
+            ResolveTargetKind.AttributeNamedArgument  => "ScalarType()%",
+            ResolveTargetKind.AttributeArgument => "",
             _ => $"Type(isByRef: {isByRef})%",
         };
     }

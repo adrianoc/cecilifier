@@ -1,5 +1,6 @@
 using System.Text;
 using Cecilifier.Core.ApiDriver.Attributes;
+using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
 using Cecilifier.Core.Naming;
@@ -71,7 +72,11 @@ internal struct AttributeEncoder
         encoded.AppendLine("}");
     }
 
-    private string ScalarExpressionFor(CustomAttributeArgument customAttributeArgument) => $"Scalar().Constant({customAttributeArgument.Value.ValueText()})";
+    private string ScalarExpressionFor(CustomAttributeArgument customAttributeArgument) => customAttributeArgument.Value switch
+    {
+        CilToken token => $"""Scalar(){token.VariableName}""",
+        _ => $"Scalar().Constant({customAttributeArgument.Value.ValueText()})"
+    };
 
     private void EncodeNamedArguments(string namedArgumentsEncoderVariableName, IList<CustomAttributeNamedArgument> namedArguments, StringBuilder encoded)
     {
