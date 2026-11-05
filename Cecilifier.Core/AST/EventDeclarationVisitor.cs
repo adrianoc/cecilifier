@@ -147,7 +147,7 @@ namespace Cecilifier.Core.AST
         private void CreateLocalVarsForEventRegistrationMethods(string methodVar, string eventAccessorName, in ResolvedType eventType)
         {
             for (int i = 0; i < 3; i++)
-                Context.ApiDefinitionsFactory.LocalVariable(Context, Context.Naming.SyntheticVariable(eventAccessorName, ElementKind.LocalVariable), methodVar, eventType);
+                Context.ApiDefinitionsFactory.LocalVariable(Context, new(Context.Naming.SyntheticVariable(eventAccessorName, ElementKind.LocalVariable), eventType, methodVar));
         }
 
         private IEnumerable<string> RemoveMethodBody(EventFieldDeclarationSyntax eventSyntax, IEventSymbol eventSymbol, string accessorName, string removeMethodVar, string backingFieldVar, IlContext ilContext)
@@ -162,7 +162,6 @@ namespace Cecilifier.Core.AST
 
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
-            ResolvedType[] localVariableTypes = [];
             InstructionRepresentation[] instructions = [
                 lgarg_0,
                 ldfld.WithOperand(fieldVar.AsToken()),
@@ -185,7 +184,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Bne_Un_S.WithBranchOperand("LoopStart"),
                 OpCodes.Ret
             ];
-            var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, ilContext, localVariableTypes, instructions);
+            var bodyExps = Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, ilContext, [], instructions);
 
             return bodyExps;
         }
@@ -204,7 +203,6 @@ namespace Cecilifier.Core.AST
             // static member access does not have a *this* so simply replace with *Nop*
             var lgarg_0 = isStatic ? OpCodes.Nop : OpCodes.Ldarg_0;
             
-            ResolvedType[] localVariableTypes = [];
             InstructionRepresentation[] instructions = [
                 lgarg_0,
                 ldfld.WithOperand(fieldVar.AsToken()),
@@ -229,7 +227,7 @@ namespace Cecilifier.Core.AST
                 OpCodes.Ret
             ];
 
-            return Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, ilContext, localVariableTypes, instructions);
+            return Context.ApiDefinitionsFactory.MethodBody(Context, accessorName, ilContext, [], instructions);
         }
 
         private string CompareExchangeMethodResolvingExps(ITypeSymbol typeArgument)

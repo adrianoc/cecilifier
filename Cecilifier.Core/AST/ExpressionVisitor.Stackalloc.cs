@@ -420,7 +420,7 @@ internal class StackallocSpanAssignmentTracker
         var currentMethodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
         Debug.Assert(currentMethodVar.IsValid);
 
-        var spanLengthVariable = context.ApiDefinitionsFactory.LocalVariable(context, "spanElementCount", currentMethodVar, context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.LocalVariable));
+        var spanLengthVariable = context.ApiDefinitionsFactory.LocalVariable(context, new("spanElementCount", context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemInt32, ResolveTargetKind.LocalVariable), currentMethodVar));
 
         SpanLengthVariable = spanLengthVariable.VariableName;
         LoadOpCode = OpCodes.Ldloc;

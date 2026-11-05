@@ -306,7 +306,6 @@ public class RecordTests
     
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
     public class RecordStructs<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]

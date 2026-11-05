@@ -17,7 +17,7 @@ public class DefinitionVariable : IEquatable<DefinitionVariable>
     }
 
     public string MemberName { get; }
-    public VariableMemberKind Kind { get; }
+    public VariableMemberKind Kind { get; internal set; }
     public string VariableName { get; }
     public bool IsValid { get; protected set; }
     public bool IsForwarded { get; internal set; }

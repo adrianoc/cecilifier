@@ -249,9 +249,10 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return resolved;
         }
 
+        
         var immutableArray = typeArguments.ToImmutableArray();
         var definitionVariable = _context.DefinitionVariables.GetOrRegisterNonMethodVariable(
-            typeName, 
+            $"{typeName}{HashCodeFor(typeArguments)}", // use a unique type name for each type instantiation. 
             string.Empty, 
             VariableMemberKind.None, 
             new TypeResolutionContext(ResolveTargetKind.None, TypeResolutionOptions.RegisterVariables),
@@ -411,4 +412,15 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     private string GenericParameterExpressionFor(ResolvedType genericTypeParameter, TypeParameterKind typeParameterKind)=> typeParameterKind == TypeParameterKind.Type
         ? $"GenericTypeParameter({genericTypeParameter})"
         : $"GenericMethodTypeParameter({genericTypeParameter})";
+    
+    private int HashCodeFor(Span<ResolvedType> typeArguments)
+    {
+        int hashCode = -1521134295;
+        foreach (var typeArgument in typeArguments)
+        {
+            hashCode = HashCode.Combine(hashCode, typeArgument.Expression.GetHashCode());
+        }
+        
+        return hashCode;
+    }
 }

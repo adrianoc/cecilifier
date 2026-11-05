@@ -46,7 +46,7 @@ public class PrimaryConstructorGenerator
         var propDefVar = context.Naming.SyntheticVariable(parameter.Identifier.Text, ElementKind.Property);
         var paramSymbol = context.SemanticModel.GetDeclaredSymbol(parameter).EnsureNotNull<ISymbol, IParameterSymbol>();
         var definitionContext = new BodiedMemberDefinitionContext(parameter.Identifier.Text, propDefVar, declaringTypeVariable.VariableName, MemberOptions.None, IlContext.None);
-        var exps = context.ApiDefinitionsFactory.Property(context, definitionContext, declaringTypeVariable.MemberName, [], context.TypeResolver.Resolve(paramSymbol.Type, ResolveTargetKind.None));
+        var exps = context.ApiDefinitionsFactory.Property(context, definitionContext, declaringTypeVariable.MemberName, [], context.TypeResolver.Resolve(paramSymbol.Type, ResolveTargetKind.Property));
         
         context.Generate(exps);
         context.WriteNewLine();
@@ -112,22 +112,21 @@ public class PrimaryConstructorGenerator
         var ctorVar = context.Naming.Constructor(typeDeclaration, false);
         string typeName = typeSymbol.OriginalDefinition.ToDisplayString();
         var parameters = typeDeclaration.ParameterList?.Parameters.Select(p => p.ToParameterSpec(context, ctorVar)).ToArray() ?? [];
+        var ilContext = context.ApiDriver.NewIlContext(context, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar);
         var exps = context.ApiDefinitionsFactory.Constructor(
-            context, 
-            new BodiedMemberDefinitionContext("ctor", ctorVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
-            typeName, 
-            false, 
-            "MethodAttributes.Public", 
-            parameters);
-        var ctorExp = exps;
-        context.Generate(ctorExp);
+                                                                        context,
+                                                                        new BodiedMemberDefinitionContext("ctor", ctorVar, recordTypeDefinitionVariable, MemberOptions.None, ilContext),
+                                                                        typeName,
+                                                                        false,
+                                                                        "MethodAttributes.Public",
+                                                                        parameters);
+        context.Generate(exps);
 
         // parameterless primary constructors still have a body comprised of a single return.
         // in this scenario Parameters will be an empty list.
         if (typeDeclaration.ParameterList?.Parameters == null)
             return;
         
-        var ilContext = context.ApiDriver.NewIlContext(context, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar);
         var ctorExps = context.ApiDefinitionsFactory.MethodBody(context, $"ctor_{typeDeclaration.Identifier.ValueText}", ilContext, [], []);
         context.Generate(ctorExps);
 
@@ -146,13 +145,13 @@ public class PrimaryConstructorGenerator
             paramVar.ThrowIfVariableIsNotValid();
             
             context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ldarg_0);
-            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ldarg, paramVar.VariableName);
+            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ldarg, paramVar.VariableName.AsToken());
 
             var backingFieldVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText), VariableMemberKind.Field, typeSymbol.OriginalDefinition.ToDisplayString());
             if (!backingFieldVar.IsValid)
                 throw new InvalidOperationException($"Backing field variable for property '{parameter.Identifier.ValueText}' could not be found.");
 
-            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Stfld, fieldRefResolver(backingFieldVar.VariableName));
+            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Stfld, fieldRefResolver(backingFieldVar.VariableName).AsToken());
         }
 
         if (!typeSymbol.IsValueType)

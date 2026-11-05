@@ -29,7 +29,7 @@ public static class CecilifierContextExtensions
         if (!currentMethod.IsValid)
             throw new InvalidOperationException("Could not resolve current method declaration variable.");
 
-        return context.ApiDefinitionsFactory.LocalVariable(context, localVarName, currentMethod.VariableName, varType);
+        return context.ApiDefinitionsFactory.LocalVariable(context, new(localVarName, varType, currentMethod.VariableName));
     }
 
     internal static bool TryApplyConversions(this IVisitorContext context, IlContext ilVar, IOperation operation)

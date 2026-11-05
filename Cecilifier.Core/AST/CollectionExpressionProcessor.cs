@@ -73,7 +73,7 @@ internal static class CollectionExpressionProcessor
         var inlineArrayTypeVarForLocal = context.TypeResolver.MakeGenericInstanceType(inlineArrayTypeName, inlineArrayType, [context.TypeResolver.Resolve(inlineArrayElementType, inlineArrayTypeResolutionContext)], new TypeResolutionContext(ResolveTargetKind.LocalVariable, TypeResolutionOptions.IsValueType)); 
         var inlineArrayTypeVarForTypeArgument = context.TypeResolver.MakeGenericInstanceType(inlineArrayTypeName, inlineArrayType, [context.TypeResolver.Resolve(inlineArrayElementType, inlineArrayTypeResolutionContext)], new TypeResolutionContext(ResolveTargetKind.GenericTypeArgument, TypeResolutionOptions.IsValueType));
             
-        var inlineArrayLocalVar = context.ApiDefinitionsFactory.LocalVariable(context, "buffer", currentMethodVar, inlineArrayTypeVarForLocal).VariableName;
+        var inlineArrayLocalVar = context.ApiDefinitionsFactory.LocalVariable(context, new("buffer", inlineArrayTypeVarForLocal, currentMethodVar)).VariableName;
         
         // Initializes the inline array
         context.ApiDriver.WriteCilInstruction(context, visitor.ILVariable, OpCodes.Ldloca_S, inlineArrayLocalVar.AsLocalVariable());

@@ -52,7 +52,6 @@ internal class PropertyGenerator
                 Constants.ParameterAttributes.None) { RegistrationTypeName = property.TypeNameForRegistration }
         };
 
-        IList<string> typeParameters = [];
         var memberOptions = (property.IsStatic ? MemberOptions.Static :  MemberOptions.None) 
                             | (isInitOnly ? MemberOptions.InitOnly : MemberOptions.None);
         
@@ -62,7 +61,7 @@ internal class PropertyGenerator
                                             property.DeclaringTypeNameForRegistration, 
                                             property.AccessorModifiers["set"], 
                                             completeParamList, 
-                                            typeParameters,
+                                            [],
                                             ctx => ctx.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType),
                                             out var methodDefinitionVariable);
 

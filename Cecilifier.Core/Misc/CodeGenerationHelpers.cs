@@ -15,7 +15,7 @@ public struct CodeGenerationHelpers
     {
         var methodVar = context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
         var resolvedVarType = context.TypeResolver.Resolve(type, ResolveTargetKind.LocalVariable);
-        var tempLocalDefinitionVariable = context.ApiDefinitionsFactory.LocalVariable(context, variableName, methodVar.VariableName, resolvedVarType);
+        var tempLocalDefinitionVariable = context.ApiDefinitionsFactory.LocalVariable(context, new(variableName, resolvedVarType, methodVar.VariableName));
         context.ApiDriver.WriteCilInstruction(context, ilVar, OpCodes.Stloc, new CilLocalVariableHandle(tempLocalDefinitionVariable.VariableName));
         return tempLocalDefinitionVariable;
     }
