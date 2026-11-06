@@ -218,7 +218,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
     
     public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, Span<LocalVariableDefinitionContext> localVariables, InstructionRepresentation[] instructions) => MethodBodyCore(context, methodName, ilContext, localVariables.ToArray(), instructions);
 
-    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters)
+    public string Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters)
     {
         var ctorName = Utils.ConstructorMethodName(isStatic);
         context.DefinitionVariables.RegisterMethod(typeName, ctorName, parameters.Select(p => p.RegistrationTypeName).ToArray()!, [], definitionContext.Member.DefinitionVariable);
@@ -238,8 +238,10 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.Identifier, parameter.Name, VariableMemberKind.Parameter, paramVar);
         }
         exps.Add($"{definitionContext.Member.ParentDefinitionVariable}.Methods.Add({definitionContext.Member.DefinitionVariable});");
+        
+        context.Generate(exps);
 
-        return exps;
+        return definitionContext.Member.DefinitionVariable;
     }
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)

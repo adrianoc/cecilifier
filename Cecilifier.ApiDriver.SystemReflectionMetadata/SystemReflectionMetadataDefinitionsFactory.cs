@@ -400,11 +400,14 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
         return [];
     }
 
-    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters)
+    public string Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters)
     {
+        var voidType = context.TypeResolver.Resolve(context.RoslynTypeSystem.SystemVoid, ResolveTargetKind.ReturnType);
+        var ctorMethodRefVar = context.MemberResolver.ResolveMethod(definitionContext.Member.ContainingTypeName, definitionContext.Member.ParentDefinitionVariable, definitionContext.Member.Name, voidType, parameters, [], MemberOptions.None);
+
         var nameAsIdentifier = typeName.ToValidIdentifier();
         var parameterCtorSignatureVar = context.Naming.SyntheticVariable($"{nameAsIdentifier}_ctorSignature", ElementKind.MemberReference);
-        yield return Format(
+        context.Generate(
             $$"""
               var {{parameterCtorSignatureVar}} = new BlobBuilder();
               new BlobEncoder({{parameterCtorSignatureVar}})
@@ -444,6 +447,8 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
             ctx.WriteNewLine();
             return ctorDefVar;
         });
+
+        return ctorMethodRefVar;
     }
 
     public IEnumerable<string> Parameter(IVisitorContext context, ParameterSpec parameterSpec, string memberVar, string paramVar)

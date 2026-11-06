@@ -25,16 +25,16 @@ internal partial class RecordGenerator
         context.WriteNewLine();
         context.WriteComment($"{record.Identifier.ValueText}.{PrintMembersMethodName}()");
 
-        //var printMembersMethodDefinitionVarName = context.Naming.SyntheticVariable(PrintMembersMethodName, ElementKind.Method);
-        var builderParameter = new ParameterSpec("builder", context.TypeResolver.Resolve(context.RoslynTypeSystem.ForType<StringBuilder>(), ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None);
+        var stringBuilderTypeSymbol = context.RoslynTypeSystem.ForType<StringBuilder>();
+        var builderParameter = new ParameterSpec("builder", context.TypeResolver.Resolve(stringBuilderTypeSymbol, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = stringBuilderTypeSymbol.ToDisplayString() };
         string methodModifiers = $"MethodAttributes.Family | {(HasBaseRecord(record) ? Constants.Cecil.HideBySigVirtual : Constants.Cecil.HideBySigNewSlotVirtual)}";
         var ilContext = context.ApiDriver.NewIlContext(context, PrintMembersMethodName, context.Naming.SyntheticVariable(PrintMembersMethodName, ElementKind.Method));
         var printMembersDeclExps = context.ApiDefinitionsFactory.Method(
                                                                 context, 
                                                                 new BodiedMemberDefinitionContext(PrintMembersMethodName, ilContext.AssociatedMethodVariable, recordTypeDefinitionVariable, MemberOptions.None, ilContext), 
                                                                 _recordSymbol.OriginalDefinition.ToDisplayString(), 
-                                                                methodModifiers, 
-                                                                new [] { builderParameter }, 
+                                                                methodModifiers,
+                                                                [ builderParameter ], 
                                                                 Array.Empty<string>(), 
                                                                 BooleanReturnTypeResolver,
                                                                 out var methodDefinitionVariable);
@@ -152,7 +152,7 @@ internal partial class RecordGenerator
             return $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.Resolve(_recordSymbol, ResolveTargetKind.None)}}) { HasThis = true, Parameters = { new ParameterDefinition({{context.TypeResolver.Resolve(stringBuilderSymbol, ResolveTargetKind.Parameter)}}) } }""";
             
         return HasBaseRecord(context, _recordSymbol) 
-            ? $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.Resolve(_recordSymbol.BaseType, ResolveTargetKind.None)}}) { HasThis = true, Parameters = { new ParameterDefinition({{ context.TypeResolver.Resolve(stringBuilderSymbol, ResolveTargetKind.Parameter) }}) } }"""
+            ? context.MemberResolver.ResolveMethod((IMethodSymbol) _recordSymbol.BaseType!.GetMembers("PrintMembers").Single())
             : PrintMembersVar;
     }
 }

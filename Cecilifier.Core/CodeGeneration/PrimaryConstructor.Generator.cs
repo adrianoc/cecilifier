@@ -113,15 +113,14 @@ public class PrimaryConstructorGenerator
         string typeName = typeSymbol.OriginalDefinition.ToDisplayString();
         var parameters = typeDeclaration.ParameterList?.Parameters.Select(p => p.ToParameterSpec(context, ctorVar)).ToArray() ?? [];
         var ilContext = context.ApiDriver.NewIlContext(context, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar);
-        var exps = context.ApiDefinitionsFactory.Constructor(
-                                                                        context,
-                                                                        new BodiedMemberDefinitionContext("ctor", ctorVar, recordTypeDefinitionVariable, MemberOptions.None, ilContext),
-                                                                        typeName,
-                                                                        false,
-                                                                        "MethodAttributes.Public",
-                                                                        parameters);
-        context.Generate(exps);
-
+        context.ApiDefinitionsFactory.Constructor(
+                                            context,
+                                            new BodiedMemberDefinitionContext(new MemberDefinitionContext("ctor", ctorVar, recordTypeDefinitionVariable) { ContainingTypeName = typeSymbol.Name }, MemberOptions.None, ilContext),
+                                            typeName,
+                                            false,
+                                            "MethodAttributes.Public",
+                                            parameters);
+        
         // parameterless primary constructors still have a body comprised of a single return.
         // in this scenario Parameters will be an empty list.
         if (typeDeclaration.ParameterList?.Parameters == null)
@@ -178,7 +177,7 @@ public class PrimaryConstructorGenerator
                 baseCtor = context.RoslynTypeSystem.SystemObject.GetMembers().OfType<IMethodSymbol>().Single(m => m is { Name: ".ctor" }).MethodResolverExpression(context);
             }
         
-            context.ApiDriver.WriteCilInstruction(context, ctorIlVar, OpCodes.Call, baseCtor);
+            context.ApiDriver.WriteCilInstruction(context, ctorIlVar, OpCodes.Call, baseCtor.AsToken());
         }
     }
 }

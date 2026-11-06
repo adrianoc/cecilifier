@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace Cecilifier.Core.Variables;
 
@@ -23,6 +24,8 @@ public readonly unsafe struct ScopedDefinitionVariable : IDisposable
             _unregister(_definitionVariables, i);
         }
     }
+    
+    public ref DefinitionVariable Variable => ref CollectionsMarshal.AsSpan(_definitionVariables)[_currentSize];
 
     static void ConditionalUnregister(IList<DefinitionVariable> variables, int index)
     {

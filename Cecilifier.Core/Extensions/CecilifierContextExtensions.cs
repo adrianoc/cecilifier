@@ -197,7 +197,7 @@ public static class CecilifierContextExtensions
         }
         else
         {
-            methodDeclarationVar = method.MethodKind == MethodKind.Constructor
+            methodDeclarationVar = method.MethodKind == MethodKind.Constructor || method.ContainingType.IsRecord
                 ? context.Naming.Constructor((BaseTypeDeclarationSyntax) method.ContainingType.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax(), method.IsStatic)
                 : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
         }

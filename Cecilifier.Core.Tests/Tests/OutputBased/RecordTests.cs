@@ -10,8 +10,7 @@ namespace Cecilifier.Core.Tests.OutputBased;
 public class RecordTests
 {
     [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
-    [TestFixture(typeof(SystemReflectionMetadataContext),  TestName = "System.Reflection.Metadata")]
-    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+    [TestFixture(typeof(SystemReflectionMetadataContext), TestName = "System.Reflection.Metadata")]
     public class Misc<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
@@ -107,7 +106,6 @@ public class RecordTests
 
     [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
     [TestFixture(typeof(SystemReflectionMetadataContext),  TestName = "System.Reflection.Metadata")]
-    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
     public class EqualsOverloadTest<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
@@ -141,6 +139,7 @@ public class RecordTests
         }
         
         [Test]
+        [DisableForContext<SystemReflectionMetadataContext>]
         public void VariousOverloads_WhenInheritingFromRecord_Works()
         {
             AssertOutput("""
@@ -193,7 +192,6 @@ public class RecordTests
 
     [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
     [TestFixture(typeof(SystemReflectionMetadataContext),  TestName = "System.Reflection.Metadata")]
-    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
     public class Deconstruct<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
