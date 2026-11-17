@@ -137,7 +137,7 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
         var typeResolver = (SystemReflectionMetadataTypeResolver) context.TypeResolver;
         context.Generate($"""
                           BlobBuilder {fieldSignatureVarName} = new();
-                          new BlobEncoder({fieldSignatureVarName}).Field().{typeResolver.Resolve(field.Type, new TypeResolutionContext(ResolveTargetKind.Field, field.RefKind != RefKind.None ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None))};
+                          new BlobEncoder({fieldSignatureVarName}).Field().{typeResolver.Resolve(field.OriginalDefinition.Type, new TypeResolutionContext(ResolveTargetKind.Field, field.RefKind != RefKind.None ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None))};
                           var {fieldRefVarName} = metadata.AddMemberReference({resolvedDeclaringType}, metadata.GetOrAddString("{field.Name}"), metadata.GetOrAddBlob({fieldSignatureVarName}));
                           """);
 
