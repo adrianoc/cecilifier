@@ -252,7 +252,8 @@ public class CecilifierTestBase<TContext> where TContext : IVisitorContext
             new CecilifierOptions
             {
                 References = GetDotNetAssemblyReferences(), Naming = new DefaultNameStrategy(),
-                PreprocessorSymbols = TContext.GetPreprocessorSymbols()
+                PreprocessorSymbols = TContext.GetPreprocessorSymbols(),
+                Comment = TestContext.CurrentContext.Test.FullName
             });
     }
 

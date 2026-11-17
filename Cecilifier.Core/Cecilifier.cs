@@ -49,7 +49,7 @@ namespace Cecilifier.Core
             visitor.Visit(root);
             
             var mainTypeName = visitor.MainType != null ? visitor.MainType.Identifier.Text : "Cecilified";
-            var reader = new StringReader(context.ApiDriver.AsCecilApplication(context.Output, mainTypeName, visitor.MainMethodDefinitionVariable));
+            var reader = new StringReader(context.ApiDriver.AsCecilApplication(context.Output, options.Comment, mainTypeName, visitor.MainMethodDefinitionVariable));
             return new CecilifierResult(reader, mainTypeName, context.Mappings, context, context.Diagnostics);
         }
 

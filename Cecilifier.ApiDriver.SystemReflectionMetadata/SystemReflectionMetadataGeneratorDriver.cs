@@ -14,7 +14,7 @@ namespace Cecilifier.ApiDriver.SystemReflectionMetadata;
 
 public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase, IILGeneratorApiDriver
 {
-    public string AsCecilApplication(string cecilifiedCode, string mainTypeName, string? entryPointVar)
+    public string AsCecilApplication(string cecilifiedCode, string comment, string mainTypeName, string? entryPointVar)
     {
         var entryPointExpression = entryPointVar ?? "MetadataTokens.MethodDefinitionHandle(0)";
         return $$"""
@@ -118,7 +118,7 @@ public class SystemReflectionMetadataGeneratorDriver : ILGeneratorApiDriverBase,
                  internal static class Extensions
                  {
                     internal static void WithSignatureTypeEncoder(this SignatureTypeEncoder ste, Action<SignatureTypeEncoder> encodingAction) => encodingAction(ste);
-                 }
+                 }{{ (!string.IsNullOrWhiteSpace(comment) ? $"{Environment.NewLine}{Environment.NewLine}/*{Environment.NewLine}{comment}{Environment.NewLine}*/{Environment.NewLine}" : "") }}
                  """;
     }
 
