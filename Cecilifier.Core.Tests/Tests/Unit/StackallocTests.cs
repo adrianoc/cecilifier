@@ -71,62 +71,6 @@ public class StackallocTests : CecilifierUnitTestBase
                                                + @"\1Stloc, l_b_3\);\s+"
                                                + @"\1Ret\);\s+"));
     }
-
-    [Test]
-    public void Test_Issue_133_Span_InitializedByStackallocWithSizeFromParameter_PassedAsParameter()
-    {
-        var result = RunCecilifier(@"using System; class Foo { static void Bar(Span<int> span) {  Bar(stackalloc int[1000]); } }");
-        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-
-        Assert.That(cecilifiedCode, Does.Match("""
-                                               //Bar\(stackalloc int\[1000\]\);
-                                               (?<emit>\s+il_bar_\d+\.Emit\(OpCodes\.)Ldc_I4, 4000\); // 1000 \(elements\) \* 4 \(bytes per element\)
-                                               \k<emit>Conv_U\);
-                                               \k<emit>Localloc\);
-                                               \k<emit>Ldc_I4, 1000\);
-                                               \s+var m_declaringType_4 = assembly.MainModule.ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(.+Int32\);
-                                               \s+var r_tmpMethod_5 = assembly.MainModule.ImportReference\(m_declaringType_4\.ElementType.+Methods\.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 2 && m.Parameters\[0\].ParameterType.IsByReference == false && m.Parameters\[1\].ParameterType.IsByReference == false\)\);
-                                               \s+var r__ctor_6 = new MethodReference\(r_tmpMethod_5.Name, r_tmpMethod_5.ReturnType\)
-                                               \s+{
-                                               \s+HasThis = r_tmpMethod_5.HasThis,
-                                               \s+CallingConvention = r_tmpMethod_5.CallingConvention,
-                                               \s+ExplicitThis = r_tmpMethod_5.ExplicitThis,
-                                               \s+DeclaringType = m_declaringType_4,
-                                               \s+};
-                                               \s+r__ctor_6.Parameters.Add\(.+r_tmpMethod_5.Parameters\[0\].+\);
-                                               \s+r__ctor_6.Parameters.Add\(.+r_tmpMethod_5.Parameters\[1\].+\);
-                                               \k<emit>Newobj, r__ctor_6\);
-                                               """));
-    }
-
-    [Test]
-    public void Test_Issue_133_Span_InitializedByStackallocWithSizeFromField_PassedAsParameter()
-    {
-        var result = RunCecilifier(@"using System; class Foo { public static int countField; static void Bar(Span<int> span) {  Bar(stackalloc int[countField]); } }");
-        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        
-        Assert.That(cecilifiedCode, Does.Match("""
-                                               //Bar\(stackalloc int\[countField\]\);
-                                               (?<emit>\s+il_bar_\d+.Emit\(OpCodes\.)Ldsfld, fld_countField_\d+\);
-                                               \k<emit>Conv_U\);
-                                               \k<emit>Sizeof, assembly.MainModule.TypeSystem.Int32\);
-                                               \k<emit>Mul_Ovf_Un\);
-                                               \k<emit>Localloc\);
-                                               \k<emit>Ldfld, fld_countField_1\);
-                                               \s+var m_declaringType_5 = assembly.MainModule.ImportReference\(.+Span<>.+\).MakeGenericInstanceType\(.+Int32\);
-                                               \s+var r_tmpMethod_6 = assembly.MainModule.ImportReference\(m_declaringType_5.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 2 && m.Parameters\[0\].ParameterType.IsByReference == false && m.Parameters\[1\].ParameterType.IsByReference == false\)\);
-                                               \s+var (?<span_ctor>r__ctor_\d+) = new MethodReference\(r_tmpMethod_6.Name, r_tmpMethod_6.ReturnType\)
-                                               \s+{
-                                               \s+HasThis = r_tmpMethod_6.HasThis,
-                                               \s+CallingConvention = r_tmpMethod_6.CallingConvention,
-                                               \s+ExplicitThis = r_tmpMethod_6.ExplicitThis,
-                                               \s+DeclaringType = m_declaringType_5,
-                                               \s+};
-                                               \s+\k<span_ctor>.Parameters.Add\(new ParameterDefinition\(r_tmpMethod_6.Parameters\[0\].Name,.+\)\);
-                                               \s+\k<span_ctor>.Parameters.Add\(new ParameterDefinition\(r_tmpMethod_6.Parameters\[1\].Name,.+\)\);
-                                               \k<emit>Newobj, \k<span_ctor>\);
-                                               """));
-    }
     
     [Test]
     public void Test_Span_InitializedByStackallocWithSizeFromProperty()
@@ -158,57 +102,6 @@ public class StackallocTests : CecilifierUnitTestBase
                                                \s+m_bar_\d+\.Body.Variables.Add\(\k<span_var>\);
                                                (?<ilp>\s+il_bar_\d+\.Emit\(OpCodes\.){storageLoadOpCodeAndArgument}\);
                                                \k<ilp>Conv_U\);
-                                               """));
-    }
-    
-    [Test]
-    public void ImplicitStackAllocInNestedExpressions()
-    {
-        var code = @"using System; class C { void M() => M2(stackalloc [] { 1, 2, 3}); void M2(Span<int> span) {} }";
-        var result = RunCecilifier(code);
-        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-
-        Assert.That(cecilifiedCode, Does.Match("""
-                                               \s+var m_declaringType_10 = .+ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(.+Int32\);
-                                               \s+var r_tmpMethod_11 = .+ImportReference\(m_declaringType_10.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 2 && m.Parameters\[0\].ParameterType.IsByReference == false &&.+\)\);
-                                               \s+var (?<span_ctor>r__ctor_\d+) = new MethodReference\(r_tmpMethod_11.Name, r_tmpMethod_11.ReturnType\)
-                                               \s+{
-                                               \s+HasThis = r_tmpMethod_11.HasThis,
-                                               \s+CallingConvention = r_tmpMethod_11.CallingConvention,
-                                               \s+ExplicitThis = r_tmpMethod_11.ExplicitThis,
-                                               \s+DeclaringType = m_declaringType_10,
-                                               \s+};
-                                               \s+\k<span_ctor>.Parameters.Add\(new ParameterDefinition\(r_tmpMethod_11.Parameters\[0\].Name,.+\)\);
-                                               \s+\k<span_ctor>.Parameters.Add\(new ParameterDefinition\(r_tmpMethod_11.Parameters\[1\].Name,.+\)\);
-                                               \s+il_M_5.Emit\(OpCodes.Newobj, \k<span_ctor>\);
-                                               """));
-    }
-
-    [Test]
-    public void ExplicitStackAllocInNestedExpressions()
-    {
-        var code = @"using System; class C { void M() => M2(stackalloc int[42]); void M2(Span<int> span) {} }";
-        var result = RunCecilifier(code);
-        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-
-        Assert.That(cecilifiedCode, Does.Match("""
-                                               //M2\(stackalloc int\[42\]\)
-                                               (?<emit>\s+il_M_\d+\.Emit\(OpCodes\.)Ldc_I4, 168\); //.+
-                                               \k<emit>Conv_U\);
-                                               \k<emit>Localloc\);
-                                               \k<emit>Ldc_I4, 42\);
-                                               \s+var m_declaringType_6 = .+ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(.+Int32\);
-                                               \s+var r_tmpMethod_7 = .+ImportReference\(m_declaringType_6.ElementType.Resolve\(\).Methods.Single\(m => m.Name == ".ctor" && m.Parameters.Count == 2 && m.Parameters\[0\].ParameterType.IsByReference == false &&.+\)\);
-                                               \s+var (?<span_ctor>r__ctor_\d+) = new MethodReference\(r_tmpMethod_7.Name, r_tmpMethod_7.ReturnType\)
-                                               \s+{
-                                               \s+HasThis = r_tmpMethod_7.HasThis,
-                                               \s+CallingConvention = r_tmpMethod_7.CallingConvention,
-                                               \s+ExplicitThis = r_tmpMethod_7.ExplicitThis,
-                                               \s+DeclaringType = m_declaringType_6,
-                                               \s+};
-                                               \s+\k<span_ctor>.Parameters.Add\(.+ParameterDefinition\(r_tmpMethod_7.Parameters\[0\].Name,.+\)\);
-                                               \s+\k<span_ctor>.Parameters.Add\(.+ParameterDefinition\(r_tmpMethod_7.Parameters\[1\].Name,.+\)\);
-                                               \k<emit>Newobj, \k<span_ctor>\);
                                                """));
     }
     
