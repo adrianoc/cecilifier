@@ -22,19 +22,19 @@ namespace Cecilifier.Core.CodeGeneration;
 /// </summary>
 public class PrimaryConstructorGenerator
 {
-    internal static void AddPropertiesFrom(IVisitorContext context, string typeDefinitionVariable, TypeDeclarationSyntax type, INamedTypeSymbol declaringType)
+    internal static void AddPropertiesFrom(IVisitorContext context, TypeDeclarationSyntax type, INamedTypeSymbol declaringType)
     {
-        if (type.ParameterList is null)
-            return;
-
-        foreach (var parameter in type.GetUniqueParameters(context))
+        if (type.ParameterList is not null)
         {
-            AddPropertyFor(context, parameter, typeDefinitionVariable, declaringType);
-            context.WriteNewLine();
+            foreach (var parameter in type.GetUniqueParameters(context))
+            {
+                AddPropertyFor(context, parameter, declaringType);
+                context.WriteNewLine();
+            }
         }
     }
 
-    private static void AddPropertyFor(IVisitorContext context, ParameterSyntax parameter, string typeDefinitionVariable, INamedTypeSymbol declaringType)
+    private static void AddPropertyFor(IVisitorContext context, ParameterSyntax parameter, INamedTypeSymbol declaringType)
     {
         using var _ = LineInformationTracker.Track(context, parameter);
 
@@ -52,7 +52,7 @@ public class PrimaryConstructorGenerator
         context.WriteNewLine();
 
         var publicPropertyMethodAttributes = "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName";
-        var propertyType = context.SemanticModel.GetDeclaredSymbol(parameter).GetMemberType();
+        var propertyType = context.SemanticModel.GetDeclaredSymbol(parameter)!.GetMemberType();
         var propertyData = new PropertyGenerationData(
                                     declaringType.OriginalDefinition.ToDisplayString(),
                                     declaringTypeVariable.VariableName,
@@ -89,7 +89,7 @@ public class PrimaryConstructorGenerator
             }
             context.WriteNewLine();
         }
-        
+
         void AddInit()
         {
             context.WriteComment($"{propertyData.Name} init");
@@ -107,7 +107,7 @@ public class PrimaryConstructorGenerator
     internal static void AddPrimaryConstructor(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax typeDeclaration)
     {
         context.WriteComment($"Constructor: {typeDeclaration.Identifier.ValueText}{typeDeclaration.ParameterList}");
-        var typeSymbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration).EnsureNotNull<ISymbol, ITypeSymbol>();
+        var typeSymbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration).EnsureNotNull<ISymbol, INamedTypeSymbol>();
         
         var ctorVar = context.Naming.Constructor(typeDeclaration, false);
         string typeName = typeSymbol.OriginalDefinition.ToDisplayString();
@@ -130,9 +130,7 @@ public class PrimaryConstructorGenerator
         context.Generate(ctorExps);
 
         var resolvedType = context.TypeResolver.Resolve(typeSymbol, ResolveTargetKind.TypeReference);
-        Func<string, string> fieldRefResolver = backingFieldVar => typeDeclaration.TypeParameterList?.Parameters.Count > 0 
-            ? $"new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {resolvedType})" 
-            : backingFieldVar;
+        var instantiatedType = context.TypeResolver.MakeGenericInstanceType("", resolvedType, [], ResolveTargetKind.GenericTypeArgument);
 
         var uniqueParameters = typeDeclaration.GetUniqueParameters(context).ToHashSet();
         foreach (var parameter in typeDeclaration.ParameterList.Parameters)
@@ -150,7 +148,12 @@ public class PrimaryConstructorGenerator
             if (!backingFieldVar.IsValid)
                 throw new InvalidOperationException($"Backing field variable for property '{parameter.Identifier.ValueText}' could not be found.");
 
-            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Stfld, fieldRefResolver(backingFieldVar.VariableName).AsToken());
+            var parameterSymbol = context.SemanticModel.GetDeclaredSymbol(parameter).EnsureNotNull();
+            var resolvedBakingField = typeDeclaration.TypeParameterList?.Parameters.Count > 0
+                ? context.MemberResolver.ResolveField(backingFieldVar.MemberName, instantiatedType, context.TypeResolver.Resolve(parameterSymbol.Type, parameterSymbol.ToTypeResolutionContext(ResolveTargetKind.Field)))
+                : backingFieldVar;
+            
+            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Stfld, resolvedBakingField.AsToken());
         }
 
         if (!typeSymbol.IsValueType)

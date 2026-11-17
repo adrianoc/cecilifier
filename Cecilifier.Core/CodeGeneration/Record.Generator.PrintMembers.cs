@@ -71,6 +71,7 @@ internal partial class RecordGenerator
                 continue;
             }
 
+            var resolvedPropertyType = context.TypeResolver.Resolve(property.Type, ResolveTargetKind.Instruction).Expression;
             bodyInstructions.AddRange(
             [
                 OpCodes.Ldarg_1,
@@ -79,8 +80,8 @@ internal partial class RecordGenerator
                 OpCodes.Pop,
                 OpCodes.Ldarg_1,
                 OpCodes.Ldarg_0,
-                OpCodes.Call.WithOperand(ClosedGenericMethodFor($"get_{property.Name}", recordTypeDefinitionVariable).AsToken()),
-                OpCodes.Box.WithOperand(context.TypeResolver.Resolve(property.Type, ResolveTargetKind.None).Expression.AsToken()).IgnoreIf(property.Type.TypeKind != TypeKind.TypeParameter),
+                OpCodes.Call.WithOperand(ClosedGenericMethodFor($"get_{property.Name}", context.TypeResolver.Resolve(property.Type, ResolveTargetKind.ReturnType), context.TypeResolver.Resolve(_recordSymbol, ResolveTargetKind.TypeReference).Expression).AsToken()),
+                OpCodes.Box.WithOperand(resolvedPropertyType.AsToken()).IgnoreIf(property.Type.TypeKind != TypeKind.TypeParameter),
                 OpCodes.Callvirt.WithOperand(stringBuilderAppendMethod.MethodResolverExpression(context).AsToken()),
                 OpCodes.Pop
             ]);
@@ -105,7 +106,7 @@ internal partial class RecordGenerator
                 OpCodes.Pop,
                 OpCodes.Ldarg_1,
                 OpCodes.Ldarg_0,
-                OpCodes.Ldfld.WithOperand($"""new FieldReference("{field.Name}", {context.TypeResolver.Resolve(field.Type, ResolveTargetKind.TypeReference)}, {TypeOrClosedTypeFor(recordTypeDefinitionVariable)})"""),
+                OpCodes.Ldfld.WithOperand(context.MemberResolver.ResolveField(field.Name, TypeOrClosedTypeFor(recordTypeDefinitionVariable), context.TypeResolver.Resolve(field.Type, ResolveTargetKind.Field)).AsToken()),
                 OpCodes.Box.WithOperand(context.TypeResolver.Resolve(field.Type, ResolveTargetKind.Instruction).Expression.AsToken()).IgnoreIf(field.Type.TypeKind != TypeKind.TypeParameter),
                 OpCodes.Callvirt.WithOperand(stringBuilderAppendMethod.MethodResolverExpression(context).AsToken()),
                 OpCodes.Pop
@@ -149,7 +150,11 @@ internal partial class RecordGenerator
     private string PrintMembersMethodToCall(INamedTypeSymbol stringBuilderSymbol)
     {
         if (_recordSymbol is { IsGenericType: true })
-            return $$"""new MethodReference("PrintMembers", {{context.TypeResolver.Bcl.System.Boolean}}, {{context.TypeResolver.Resolve(_recordSymbol, ResolveTargetKind.None)}}) { HasThis = true, Parameters = { new ParameterDefinition({{context.TypeResolver.Resolve(stringBuilderSymbol, ResolveTargetKind.Parameter)}}) } }""";
+        {
+            var declaringTypeVariable = context.TypeResolver.Resolve(_recordSymbol, ResolveTargetKind.TypeReference).Expression;
+            var printMembersParameter = new ParameterSpec("buffer", context.TypeResolver.Resolve(stringBuilderSymbol, ResolveTargetKind.Parameter).Expression, RefKind.None, Constants.ParameterAttributes.None);
+            return context.MemberResolver.ResolveMethod(_recordSymbol.Name, declaringTypeVariable, "PrintMembers", BooleanReturnTypeResolver(context), [printMembersParameter], [], MemberOptions.None);
+        }
             
         return HasBaseRecord(context, _recordSymbol) 
             ? context.MemberResolver.ResolveMethod((IMethodSymbol) _recordSymbol.BaseType!.GetMembers("PrintMembers").Single())

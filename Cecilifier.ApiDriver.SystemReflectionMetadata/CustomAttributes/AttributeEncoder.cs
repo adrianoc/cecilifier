@@ -87,7 +87,7 @@ internal struct AttributeEncoder
         else
         {
             encoded.AppendLine("// Attribute, named arguments");
-            var namedArgumentEncoderVariableName = _context.Naming.SyntheticVariable("nae", ElementKind.None);
+            var namedArgumentEncoderVariableName = _context.Naming.SyntheticVariable("nae", ElementKind.Parameter);
             encoded.AppendLine($"var {namedArgumentEncoderVariableName} = {namedArgumentsEncoderVariableName}.Count({namedArguments.Count});");
             foreach (var namedArgument in namedArguments)
             {

@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Cecilifier.Core;
 using Cecilifier.Core.Extensions;
+using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 
@@ -22,10 +23,11 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
 
         if (resolutionContext.TypeParameterProviderVar == null)
             return null;
-            
+
+        var methodRefVarName = _context.Naming.SyntheticVariable("provider", ElementKind.MemberReference);
         var resolvedType = typeParameterSymbol.ContainingSymbol.Kind switch
         {
-            SymbolKind.NamedType => $"(({resolutionContext.TypeParameterProviderVar} is MethodReference methodReference) ? ((GenericInstanceType) methodReference.DeclaringType).ElementType : (IGenericParameterProvider) {resolutionContext.TypeParameterProviderVar} ).GenericParameters[{typeParameterSymbol.Ordinal}]",
+            SymbolKind.NamedType => $"(( ((object) {resolutionContext.TypeParameterProviderVar}) is MethodReference {methodRefVarName}) ? ((GenericInstanceType) {methodRefVarName}.DeclaringType).ElementType : (IGenericParameterProvider) {resolutionContext.TypeParameterProviderVar} ).GenericParameters[{typeParameterSymbol.Ordinal}]",
             SymbolKind.Method => $"{resolutionContext.TypeParameterProviderVar}.GenericParameters[{typeParameterSymbol.Ordinal}]",
             _ => null
         };

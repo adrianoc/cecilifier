@@ -603,7 +603,7 @@ internal class SystemReflectionMetadataDefinitionsFactory : DefinitionsFactoryBa
 
     public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, ResolvedType propertyType)
     {
-        var propertySignatureTempVar =  context.Naming.SyntheticVariable($"{definitionContext.Member.Name}BlobBuilder", ElementKind.None);
+        var propertySignatureTempVar =  context.Naming.SyntheticVariable($"{definitionContext.Member.Name}BlobBuilder", ElementKind.Method);
 
         var definitionsManager = TypedContext(context).DelayedDefinitionsManager;
         

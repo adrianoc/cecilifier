@@ -22,6 +22,7 @@ public interface IMemberResolver
     
     string ResolveDefaultConstructor(ITypeSymbol baseType, string derivedTypeVar);
     string ResolveField(IFieldSymbol field);
+    string ResolveField(string fieldName, ResolvedType declaringType, ResolvedType fieldType);
     string ResolveEventField(IEventSymbol aEvent);
     string ImportReference(string expression);
     

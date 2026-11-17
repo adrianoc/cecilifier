@@ -430,7 +430,11 @@ namespace Cecilifier.Core.Extensions
             return modifiers.ToString();
         }
         
-        public static TypeResolutionContext NewTypeResolutionContextFor(this ITypeSymbol type, ResolveTargetKind resolveTargetKind) =>
-            new(resolveTargetKind, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None);
+        public static TypeResolutionContext NewTypeResolutionContextFor(this ITypeSymbol type, ResolveTargetKind resolveTargetKind) => new(resolveTargetKind, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None);
+        public static TypeResolutionContext ToTypeResolutionContext(this IParameterSymbol parameter, ResolveTargetKind resolveTargetKind) 
+                                                        => new(
+                                                                resolveTargetKind, 
+                                                                (parameter.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None) | 
+                                                                (parameter.RefKind != RefKind.None ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None));
     }
 }

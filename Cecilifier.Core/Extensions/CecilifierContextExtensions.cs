@@ -87,7 +87,7 @@ public static class CecilifierContextExtensions
         static ParameterSpec NullableTypeParameter(IVisitorContext context)
         {
             var typeParameterSymbol = context.RoslynTypeSystem.SystemNullableOfT.TypeParameters[0];
-            var resolvedNullableTypeParameter = context.TypeResolver.Resolve(typeParameterSymbol, ResolveTargetKind.TypeReference);
+            var resolvedNullableTypeParameter = context.TypeResolver.Resolve(typeParameterSymbol, new TypeResolutionContext(ResolveTargetKind.TypeReference, TypeResolutionOptions.None) { TypeParameterProviderVar = context.TypeResolver.Bcl.System.NullableOfT.Expression });
             return new ParameterSpec(typeParameterSymbol.Name, resolvedNullableTypeParameter, RefKind.None, string.Empty);
         }
     }

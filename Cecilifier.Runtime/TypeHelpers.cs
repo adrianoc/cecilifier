@@ -2,14 +2,53 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Numerics;
 using System.Reflection;
+using System.Text;
 using Mono.Cecil;
+using Mono.Cecil.Rocks;
+using Mono.Collections.Generic;
 
 namespace Cecilifier.Runtime
 {
+    public record RuntimeParameterSpec(string Name, bool IsByReference);
+    
     public class TypeHelpers
     {
+        public static MethodReference FindBestOverload(TypeDefinition type, string methodName, IReadOnlyList<RuntimeParameterSpec> parameters)
+        {
+            return type.Methods
+                .Where(m => m.Name == methodName && ParametersMatches(m.Parameters, parameters))
+                .Select(candidate => new { Candidate = candidate, IsExactMatch = IsExactMatch(candidate.Parameters, parameters) })
+                .OrderByDescending(c => c.IsExactMatch)
+                .Select(c => c.Candidate)
+                .FirstOrDefault();
+            
+            static bool IsExactMatch(Collection<ParameterDefinition> candidates, IReadOnlyList<RuntimeParameterSpec> toBeMatched)
+            {
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    if (candidates[i].ParameterType.FullName != toBeMatched[i].Name)
+                        return false;
+                }
+
+                return true;
+            }
+            
+            static bool ParametersMatches(Collection<ParameterDefinition> candidates, IReadOnlyList<RuntimeParameterSpec> toBeMatched)
+            {
+                if (candidates.Count != toBeMatched.Count)
+                    return false;
+                
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    if (candidates[i].ParameterType.IsByReference != toBeMatched[i].IsByReference || (candidates[i].ParameterType.FullName != toBeMatched[i].Name && !candidates[i].ParameterType.IsGenericParameter))
+                        return false;
+                }
+
+                return true;
+            }
+        }
+        
         public static TypeReference NewRawNestedTypeReference(string typeName, ModuleDefinition module, TypeReference declaringType, bool isValueType, int typeParameterCount)
         {
             var typeReference = new TypeReference(String.Empty, typeName, module, declaringType.Scope) { DeclaringType = declaringType, IsValueType = isValueType ? true : false };

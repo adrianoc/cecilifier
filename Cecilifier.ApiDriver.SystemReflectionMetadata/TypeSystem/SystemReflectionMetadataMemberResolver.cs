@@ -147,6 +147,30 @@ public class SystemReflectionMetadataMemberResolver(SystemReflectionMetadataCont
 
         return fieldRefVarName;
     }
+    
+    public string ResolveField(string fieldName, ResolvedType declaringType, ResolvedType fieldType)
+    {
+        var fieldNameAsValidIdentifier = fieldName.ToValidIdentifier();
+        var found = context.DefinitionVariables.GetVariable(fieldName, VariableMemberKind.Field, declaringType.Expression);
+        if (found.IsValid)
+             return found.VariableName;
+
+        var resolvedDeclaringType = declaringType;
+
+         var fieldSignatureVarName = context.Naming.SyntheticVariable($"{fieldNameAsValidIdentifier}_Signature", ElementKind.MemberReference);
+         var fieldRefVarName = context.Naming.SyntheticVariable(fieldNameAsValidIdentifier, ElementKind.Field);
+         context.Generate($"""
+                           BlobBuilder {fieldSignatureVarName} = new();
+                           new BlobEncoder({fieldSignatureVarName}).Field().{fieldType.Expression};
+                           var {fieldRefVarName} = metadata.AddMemberReference({resolvedDeclaringType}, metadata.GetOrAddString("{fieldName}"), metadata.GetOrAddBlob({fieldSignatureVarName}));
+                           """);
+
+         context.WriteNewLine();
+
+         context.DefinitionVariables.RegisterNonMethod(declaringType.Expression, fieldName, VariableMemberKind.Field, fieldRefVarName);
+
+         return fieldRefVarName;
+    }
 
     public string ResolveEventField(IEventSymbol eventSymbol)
     {

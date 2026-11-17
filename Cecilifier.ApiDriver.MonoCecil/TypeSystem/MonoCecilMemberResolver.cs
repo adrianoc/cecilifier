@@ -4,7 +4,6 @@ using Cecilifier.ApiDriver.MonoCecil.Extensions;
 using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
 using Cecilifier.Core.Services;
 using Cecilifier.Core.TypeSystem;
@@ -131,16 +130,12 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         var correctDeclaringType = context.Naming.SyntheticVariable("declaringType", ElementKind.Method);
         context.Generate($"""var {correctDeclaringType} = {declaringTypeVariable};""");
         context.WriteNewLine();
-        
-        var methodWithIncorrectDeclaringType = context.Naming.SyntheticVariable("tmpMethod", ElementKind.MemberReference);
-        StringBuilder parameterMatcher = new($"m.Parameters.Count == {parameters.Count}");
-        for (var index = 0; index < parameters.Count; index++)
-        {
-            parameterMatcher.Append($" && m.Parameters[{index}].ParameterType.IsByReference == { (parameters[index].RefKind != RefKind.None).ToKeyword() }");
-        }
-        context.Generate($"""var {methodWithIncorrectDeclaringType} = assembly.MainModule.ImportReference({correctDeclaringType}.ElementType.Resolve().Methods.Single(m => m.Name == "{methodName}" && {parameterMatcher}));""");
-        context.WriteNewLine();
 
+        var methodWithIncorrectDeclaringType = context.Naming.SyntheticVariable("tmpMethod", ElementKind.MemberReference);
+        var parameterToMatch = string.Join(',', parameters.Select(p => $"""new RuntimeParameterSpec({p.ElementType}.FullName, { (p.RefKind != RefKind.None).ToKeyword() })"""));
+        context.Generate($"""var {methodWithIncorrectDeclaringType} = assembly.MainModule.ImportReference(TypeHelpers.FindBestOverload({correctDeclaringType}.ElementType.Resolve(), "{methodName}", [{parameterToMatch}]));""");
+        context.WriteNewLine();
+        
         var variable = context.Naming.SyntheticVariable(methodName, ElementKind.MemberReference);
         context.Generate($$"""
                           var {{variable}} = new MethodReference({{methodWithIncorrectDeclaringType}}.Name, {{methodWithIncorrectDeclaringType}}.ReturnType)
@@ -214,9 +209,10 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
     {
         // resolve declaring type of the method.
         var targetTypeVarName = context.Naming.SyntheticVariable($"{method.ContainingType.Name}", ElementKind.LocalVariable);
+        var openGenericType = context.TypeResolver.Resolve(method.ContainingType.OriginalDefinition, ResolveTargetKind.TypeReference);
         var resolvedTargetTypeExp = context.TypeResolver.MakeGenericInstanceType(
                                                 method.ContainingType.OriginalDefinition.NameIncludingTypeParametersAndArguments(),
-                                                context.TypeResolver.Resolve(method.ContainingType.OriginalDefinition, ResolveTargetKind.TypeReference),
+                                                openGenericType,
                                                 method.ContainingType, 
                                                 ResolveTargetKind.None);
         
@@ -233,8 +229,7 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
             ? $" && !m.Parameters.Select(p => p.ParameterType.FullName).Except([{methodParameterNames}]).Any()"
             : string.Empty;
 
-        context.Generate(
-            $"""var {originalMethodVar} = {context.TypeResolver.Resolve(method.ContainingType.OriginalDefinition, ResolveTargetKind.TypeReference)}.Resolve().Methods.First(m => m.Name == "{method.Name}" && m.Parameters.Count == {method.Parameters.Length}{parameterTypesCheck});""");
+        context.Generate($"""var {originalMethodVar} = {openGenericType}.Resolve().Methods.First(m => m.Name == "{method.Name}" && m.Parameters.Count == {method.Parameters.Length}{parameterTypesCheck});""");
         context.WriteNewLine();
 
         // Instantiates a MethodReference representing the called method.
@@ -297,6 +292,8 @@ public class MonoCecilMemberResolver(MonoCecilContext context) : IMemberResolver
         var declaringTypeName = field.ContainingType.FullyQualifiedName();
         return ImportReference($"TypeHelpers.ResolveField(\"{declaringTypeName}\",\"{field.Name}\")");
     }
+    
+    public string ResolveField(string fieldName, ResolvedType declaringType, ResolvedType fieldType) => $"""new FieldReference("{fieldName}", {fieldType.Expression}, {declaringType.Expression})""";
 
     public string ResolveEventField(IEventSymbol eventSymbol)
     {
