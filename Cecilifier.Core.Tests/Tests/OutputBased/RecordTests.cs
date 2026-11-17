@@ -309,7 +309,7 @@ public class RecordTests
         [Test]
         public void Test()
         {
-            AssertOutput("""
+           AssertOutput("""
                          var d = new RecordStruct(42, "Foo");
                          System.Console.WriteLine(d);
                           
