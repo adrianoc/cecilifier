@@ -73,7 +73,7 @@ namespace Cecilifier.Core.AST
 
                 case SymbolKind.Field:
                     var fs = (IFieldSymbol) info.Symbol;
-                    var fieldResolverExpression = fs.FieldResolverExpression(Context);
+                    var fieldResolverExpression = Context.MemberResolver.ResolveField(fs);
                     if (info.Symbol.IsStatic)
                     {
                         Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldsflda, fieldResolverExpression.AsToken());

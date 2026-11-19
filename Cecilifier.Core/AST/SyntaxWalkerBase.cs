@@ -366,7 +366,7 @@ namespace Cecilifier.Core.AST
             Debug.Assert(nodeParent != null);
 
             fieldSymbol.EnsureFieldExists(Context, node);
-            var resolvedFieldVariable = fieldSymbol.FieldResolverExpression(Context);
+            var resolvedFieldVariable = Context.MemberResolver.ResolveField(fieldSymbol);
             
             if (fieldSymbol.HasConstantValue && fieldSymbol.IsConst)
             {
