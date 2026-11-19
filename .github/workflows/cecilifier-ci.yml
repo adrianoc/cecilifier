@@ -8,10 +8,14 @@ jobs:
       image: mcr.microsoft.com/dotnet/sdk:10.0
     env:
       DOTNET_ROOT: /usr/share/dotnet      
-      
+
     steps:
       - uses: actions/checkout@v7
-
+      - name: Install gpg
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends gpg
+          rm -rf /var/lib/apt/lists/*
       - name: Trust checked-out repository
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
