@@ -9,6 +9,14 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
+
+      - run: |
+          which dotnet
+          dotnet --info
+          dotnet --list-sdks
+          dotnet --list-runtimes
+          echo "DOTNET_ROOT=$DOTNET_ROOT"
+
       - run: dotnet tool install --global dotnet-ilverify --version 10.0.12
       - run: dotnet restore
       - run: dotnet test --filter 'TestCategory !~ Issues' --collect:"XPlat Code Coverage"
