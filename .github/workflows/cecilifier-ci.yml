@@ -4,12 +4,10 @@ on: [push, workflow_dispatch]
 jobs:
  RunTests:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/dotnet/sdk:10.0
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '11.0.x'
-
       - run: |
           which dotnet
           dotnet --info
