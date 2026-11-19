@@ -8,6 +8,10 @@ jobs:
       image: mcr.microsoft.com/dotnet/sdk:10.0
     steps:
       - uses: actions/checkout@v7
+
+      - name: Trust checked-out repository
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        
       - run: |
           which dotnet
           dotnet --info
