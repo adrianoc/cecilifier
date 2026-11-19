@@ -76,7 +76,7 @@
                       </button>
                       <ul class="dropdown-menu">
                           <li><a href="#" onclick="document.getElementById('targetApiButton').innerHTML = 'Targeting: Mono.Cecil <span class=\'caret\'>'">Mono.Cecil</a></li>
-                          <li><a href="#" onclick="ShowModalDialog('srm_warning_dialog_id', true); document.getElementById('targetApiButton').innerHTML = 'Targeting: System.Reflection.Metadata <span class=\'caret\'>'">System.Reflection.Metadata</a></li>
+                          <li><a href="#" onclick="document.getElementById('targetApiButton').innerHTML = 'Targeting: System.Reflection.Metadata <span class=\'caret\'>'">System.Reflection.Metadata</a></li>
                       </ul>
                   </div>
                   <button class="button" id="copyToClipboard" onclick="copyToClipboard('copyPastHelper');"><i class="fa fa-copy"></i></button>
@@ -151,43 +151,6 @@
         </div>
     </div>
     <!-- Assembly References Dialog -->
-    
-    <!-- SRM WARNING -->
-    <div class="modal" aria-hidden="true">
-        <div class="modal-dialog" id="srm_warning_dialog_id">
-            <div class="modal-header" id="srm_warning_header_id" style="background-color: #761c19; padding-left: 10px;color: white; text-align: center">
-                <h2 style="margin-top:0; margin-bottom: 0">System.Reflection.Metadata Support Status</h2><a href="#" class="btn-close closemodal" style="padding-top: 0;padding-bottom: 0" aria-hidden="true" onclick="CloseModalDialog('srm_warning_dialog_id')">&times;</a>
-            </div>
-            
-            <div class="modal-body" style="font-size: x-large">
-                Support for System.Reflection.Metadata is under active development. AOT Oct/14/2026 System.Reflection.Metadata has almost parity with Mono.Cecil supported features.<br/>
-                The mains missing bits/issues:<br/>
-                <ul>
-                    <li>Generated code formatting issues</li>
-                    <li>Incorrect mapping between code snippet/cecilified code (clicking in lines in one of them will most likely not select the correct corresponding lines) </li>
-                    <li>
-                        Failing tests:
-                        <ul>
-                            <li>TestFunctionPointer("FunctionPointersAsParameters")</li>
-                            <li>AttributeTests</li>
-                            <li>Deconstruct</li>
-                            <li>GenericRefMemberReferences_Issue340</li>
-                            <li>MethodExtensionsTests</li>
-                            <li>TypeResolverTests</li>
-                        </ul>
-                    </li>
-                    <li>etc</li>
-                </ul>
-                
-                <span style="background-color: olivedrab; text-align: center">Before opening issues, please discuss in <a href="https://discord.com/channels/697096451397910548/697096452085907458" target="_blank">our discord server</a>.</span>
-            </div>
-
-            <div class="modal-footer" style="top:90%;left:94%">
-                <a href="#" class="btn" onclick="CloseModalDialog('srm_warning_dialog_id');" id="close_srm_warning_dialog">Close</a>
-            </div>
-        </div>
-    </div>
-    <!-- SRM WARNING -->
     
     <a href="javascript:void(0)" id="dlbtn" style="display: none"><button></button></a>
 </div>
