@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Cecilifier.Core.AST;
@@ -47,6 +48,7 @@ public struct RoslynTypeSystem
         SystemCollectionsGenericIEnumerableOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IEnumerable_T);
         SystemCollectionsGenericIListOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_IList_T);
         SystemCollectionsGenericICollectionOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Collections_Generic_ICollection_T);
+        SystemCollectionsGenericEqualityComparerOfT = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(EqualityComparer<>).FullName);;
         SystemNullableOfT = ctx.SemanticModel.Compilation.GetSpecialType(SpecialType.System_Nullable_T);
         SystemRuntimeCompilerServicesUnsafe = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(Unsafe).FullName);
         SystemRuntimeInteropServicesMemoryMarshal = ctx.SemanticModel.Compilation.GetTypeByMetadataName(typeof(MemoryMarshal).FullName);
@@ -87,6 +89,8 @@ public struct RoslynTypeSystem
     public ITypeSymbol SystemRuntimeCompilerServicesRuntimeHelpers { get; }
     public ITypeSymbol SystemRuntimeCompilerServicesCompilerGeneratedAttribute { get; }
     public INamedTypeSymbol SystemNullableOfT { get; }
+    
+    public INamedTypeSymbol SystemCollectionsGenericEqualityComparerOfT { get; }
     public ITypeSymbol SystemRuntimeCompilerServicesUnsafe { get;  }
     public ITypeSymbol SystemRuntimeInteropServicesMemoryMarshal { get; }
     public ITypeSymbol SystemCollectionsGenericICollectionOfT { get; }

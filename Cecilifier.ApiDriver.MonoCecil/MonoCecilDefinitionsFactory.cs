@@ -36,13 +36,13 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                                 IEnumerable<ITypeSymbol> interfaces,
                                 IEnumerable<TypeParameterSyntax>? ownTypeParameters, 
                                 IEnumerable<TypeParameterSyntax> outerTypeParameters, 
-                                params TypeLayoutProperty[] properties)
+                                params TypeLayoutProperty[] layoutProperties)
     {
         var typeName = definitionContext.Name;
         var typeVar = definitionContext.DefinitionVariable;
         
         var typeParamList = ownTypeParameters?.ToArray() ?? [];
-        typeName = TypeNameFor(typeName, typeParamList);
+        typeName = typeName.GenericTypeNameFor(typeParamList);
 
         var exps = new List<string>();
         ResolvedType resolvedBaseType = baseType == null || (baseType is INamedTypeSymbol { IsGenericType: true } genericInstance && genericInstance.TypeArguments.Any(t => t.TypeKind == TypeKind.TypeParameter))
@@ -50,9 +50,9 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
                 : context.TypeResolver.Resolve(baseType, ResolveTargetKind.TypeReference);
 
         var typeDefExp = $"var {typeVar} = new TypeDefinition(\"{typeNamespace}\", \"{typeName}\", {attrs}{(resolvedBaseType != null ? $", {resolvedBaseType}" : "")})";
-        if (properties.Length > 0)
+        if (layoutProperties.Length > 0)
         {
-            exps.Add($"{typeDefExp} {{ {string.Join(',', properties.Select(p => $"{p.Kind} = {p.Value}"))} }};");
+            exps.Add($"{typeDefExp} {{ {string.Join(',', layoutProperties.Select(p => $"{p.Kind} = {p.Value}"))} }};");
         }
         else
         {
@@ -81,9 +81,9 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return exps;
     }
     
-    public IEnumerable<string> Type(IVisitorContext context, MemberDefinitionContext definitionContext, string typeNamespace, string attrs, ResolvedType? baseType, bool isStructWithNoFields, IEnumerable<ResolvedType> interfaces, IEnumerable<string>? ownTypeParameters, IEnumerable<string>? outerTypeParameters, params TypeLayoutProperty[] properties)
+    public IEnumerable<string> Type(IVisitorContext context, MemberDefinitionContext definitionContext, string typeNamespace, string attrs, ResolvedType? baseType, bool isStructWithNoFields, IEnumerable<ResolvedType> interfaces, IEnumerable<string>? ownTypeParameters, IEnumerable<string>? outerTypeParameters, params TypeLayoutProperty[] layoutProperties)
     {
-        List<string> exps = [$"""var {definitionContext.DefinitionVariable} = new TypeDefinition(string.Empty, "{TypeNameFor(definitionContext.Name, ownTypeParameters)}", TypeAttributes.NotPublic | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Sealed, {context.TypeResolver.Bcl.System.ValueType});"""];
+        List<string> exps = [$"""var {definitionContext.DefinitionVariable} = new TypeDefinition(string.Empty, "{definitionContext.Name.GenericTypeNameFor(ownTypeParameters)}", TypeAttributes.NotPublic | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit | TypeAttributes.Sealed, {context.TypeResolver.Bcl.System.ValueType});"""];
         foreach (var typeParameterName in ownTypeParameters ?? Array.Empty<string>())
         {
             var typeParameterVar = context.Naming.SyntheticVariable(typeParameterName, ElementKind.GenericParameter);
@@ -215,67 +215,10 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             $"""var {fieldReferenceVariable} = new FieldReference("{fieldName}", {fieldType}, {declaringType.Expression});"""
         ];
     }
+    
+    public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, Span<LocalVariableDefinitionContext> localVariables, InstructionRepresentation[] instructions) => MethodBodyCore(context, methodName, ilContext, localVariables.ToArray(), instructions);
 
-    public IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, ResolvedType[] localVariableTypes, InstructionRepresentation[] instructions)
-    {
-        var tagToInstructionDefMapping = new Dictionary<string, string>();
-        yield return $"{ilContext.AssociatedMethodVariable}.Body = new MethodBody({ilContext.AssociatedMethodVariable});"; 
-        yield return $"{ilContext.AssociatedMethodVariable}.Body.InitLocals = true;";
-
-        if (localVariableTypes.Length > 0)
-        {
-            foreach (var localVariableType in localVariableTypes)
-            {
-                yield return $"{ilContext.AssociatedMethodVariable}.Body.Variables.Add({LocalVariable(localVariableType)});";
-            }
-        }
-
-        if (instructions.Length == 0)
-            yield break;
-
-        var methodInstVar = context.Naming.SyntheticVariable(methodName, ElementKind.LocalVariable);
-        yield return $"var {methodInstVar} = {ilContext.AssociatedMethodVariable}.Body.Instructions;";
-
-        // create `Mono.Cecil.Instruction` instances for each instruction that has a 'Tag'
-        foreach (var inst in instructions.Where(inst => !inst.Ignore))
-        {
-            if (inst.Tag == null)
-                continue;
-
-            var instVar = context.Naming.SyntheticVariable(inst.Tag, ElementKind.Label);
-            yield return $"var {instVar} = {ilContext.VariableName}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)});";
-            tagToInstructionDefMapping[inst.Tag] = instVar;
-        }
-
-        foreach (var inst in instructions.Where(inst => !inst.Ignore))
-        {
-            yield return inst.Tag != null
-                ? $"{methodInstVar}.Add({tagToInstructionDefMapping[inst.Tag]});"
-                : $"{methodInstVar}.Add({ilContext.VariableName}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)}));";
-        }
-
-
-        string OperandFor(InstructionRepresentation inst)
-        {
-            if (inst.Operand != null)
-            {
-                string operandValue = inst.Operand switch
-                {
-                    CilToken token => token.VariableName,
-                    string str => str,
-                    DefinitionVariable definitionVariable => definitionVariable.VariableName,
-                    _ => inst.Operand.ToString()!
-                };
-                
-                return $", {operandValue}";
-            }
-
-            return inst.BranchTargetTag?.Replace(inst.BranchTargetTag, $", {tagToInstructionDefMapping[inst.BranchTargetTag]}")
-                   ?? string.Empty;
-        }
-    }
-
-    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters)
+    public string Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters)
     {
         var ctorName = Utils.ConstructorMethodName(isStatic);
         context.DefinitionVariables.RegisterMethod(typeName, ctorName, parameters.Select(p => p.RegistrationTypeName).ToArray()!, [], definitionContext.Member.DefinitionVariable);
@@ -295,8 +238,10 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
             context.DefinitionVariables.RegisterNonMethod(definitionContext.Member.Identifier, parameter.Name, VariableMemberKind.Parameter, paramVar);
         }
         exps.Add($"{definitionContext.Member.ParentDefinitionVariable}.Methods.Add({definitionContext.Member.DefinitionVariable});");
+        
+        context.Generate(exps);
 
-        return exps;
+        return definitionContext.Member.DefinitionVariable;
     }
 
     public IEnumerable<string> Field(IVisitorContext context, in MemberDefinitionContext definitionContext, ISymbol fieldOrEvent, ITypeSymbol fieldType, string fieldAttributes, bool isVolatile, bool isByRef, in FieldInitializationData initializer = default)
@@ -333,16 +278,16 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         return exps;
     }
 
-    public DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, ResolvedType resolvedVarType)
+    public DefinitionVariable LocalVariable(IVisitorContext context, in LocalVariableDefinitionContext localVariableDefinitionContext)
     {
-        var cecilVarDeclName = context.Naming.SyntheticVariable(variableName, ElementKind.LocalVariable);
+        var cecilVarDeclName = context.Naming.SyntheticVariable(localVariableDefinitionContext.Name, ElementKind.LocalVariable);
 
-        context.Generate($"var {cecilVarDeclName} = new VariableDefinition({resolvedVarType});");
+        context.Generate($"var {cecilVarDeclName} = new VariableDefinition({localVariableDefinitionContext.Type});");
         context.WriteNewLine();
-        context.Generate($"{methodDefinitionVariableName}.Body.Variables.Add({cecilVarDeclName});");
+        context.Generate($"{localVariableDefinitionContext.MethodVariable}.Body.Variables.Add({cecilVarDeclName});");
         context.WriteNewLine();
 
-        return context.DefinitionVariables.RegisterNonMethod(string.Empty, variableName, VariableMemberKind.LocalVariable, cecilVarDeclName);
+        return context.DefinitionVariables.RegisterNonMethod(string.Empty, localVariableDefinitionContext.Name, VariableMemberKind.LocalVariable, cecilVarDeclName);
     }
 
     public IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, ResolvedType propertyType)
@@ -671,7 +616,7 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
         };
     }
 
-    private static string LocalVariable(ResolvedType resolvedType) => $"new VariableDefinition({resolvedType})";
+    private static string LocalVariable(in LocalVariableDefinitionContext localVariableContext) => $"new VariableDefinition({localVariableContext.Type})";
     
     private ResolvedType ProcessRequiredModifiers(IVisitorContext context, ResolvedType originalType, bool isVolatile)
     {
@@ -694,12 +639,57 @@ internal class MonoCecilDefinitionsFactory : DefinitionsFactoryBase, IApiDriverD
 
         return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
     }
-
-    private static string TypeNameFor<T>(string typeName, IEnumerable<T>? typeParamList)
+    
+    IEnumerable<string> MethodBodyCore(IVisitorContext context, string methodName, IlContext ilContext, LocalVariableDefinitionContext[] localVariables, InstructionRepresentation[] instructions)
     {
-        var count = typeParamList?.Count();
-        return count > 0 
-            ? $"{typeName}`{count}"
-            : typeName;
+        var tagToInstructionDefMapping = new Dictionary<string, string>();
+        yield return $"{ilContext.AssociatedMethodVariable}.Body = new MethodBody({ilContext.AssociatedMethodVariable});"; 
+        yield return $"{ilContext.AssociatedMethodVariable}.Body.InitLocals = true;";
+
+        if (localVariables.Length > 0)
+        {
+            foreach (var localVariable in localVariables)
+            {
+                yield return $"{ilContext.AssociatedMethodVariable}.Body.Variables.Add({LocalVariable(localVariable)});";
+            }
+        }
+
+        if (instructions.Length == 0)
+            yield break;
+
+        var methodInstVar = context.Naming.SyntheticVariable(methodName, ElementKind.LocalVariable);
+        yield return $"var {methodInstVar} = {ilContext.AssociatedMethodVariable}.Body.Instructions;";
+
+        // create `Mono.Cecil.Instruction` instances for each instruction that has a 'Tag'
+        foreach (var inst in instructions.Where(inst => !inst.Ignore))
+        {
+            if (inst.Tag == null)
+                continue;
+
+            var instVar = context.Naming.SyntheticVariable(inst.Tag, ElementKind.Label);
+            yield return $"var {instVar} = {ilContext.VariableName}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)});";
+            tagToInstructionDefMapping[inst.Tag] = instVar;
+        }
+
+        foreach (var inst in instructions.Where(inst => !inst.Ignore))
+        {
+            yield return inst.Tag != null
+                ? $"{methodInstVar}.Add({tagToInstructionDefMapping[inst.Tag]});"
+                : $"{methodInstVar}.Add({ilContext.VariableName}.Create({inst.OpCode.ConstantName()}{OperandFor(inst)}));";
+        }        
+        string OperandFor(InstructionRepresentation inst)
+        {
+            if (inst.Operand == null)
+                return inst.BranchTargetTag?.Replace(inst.BranchTargetTag, $", {tagToInstructionDefMapping[inst.BranchTargetTag]}") ?? string.Empty;
+            
+            string operandValue = inst.Operand switch
+            {
+                CilToken token => token.VariableName,
+                string str => str,
+                DefinitionVariable definitionVariable => definitionVariable.VariableName,
+                _ => inst.Operand.ToString()!
+            };
+            return $", {operandValue}";
+        }
     }
 }

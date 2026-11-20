@@ -137,7 +137,6 @@ public class SampleIncrementalSourceGenerator : IIncrementalGenerator
     {
         var declaringTypeHandle = td.GetDeclaringType();
         var prefix = declaringTypeHandle.IsNil ?  $"{metadataReader.GetString(td.Namespace)}." : $"{FullNameFor(metadataReader, metadataReader.GetTypeDefinition(declaringTypeHandle))}+";
-        Console.WriteLine($"{prefix}{metadataReader.GetString(td.Name)}");
         return $"{prefix}{metadataReader.GetString(td.Name)}";
     }
 }

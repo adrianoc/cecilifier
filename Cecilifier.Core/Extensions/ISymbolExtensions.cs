@@ -72,6 +72,7 @@ namespace Cecilifier.Core.Extensions
             {
                 IMethodSymbol { MethodKind: MethodKind.Conversion} method => method.ReturnType.ToDisplayString(ValidVariableNameFormat),
                 IMethodSymbol { MethodKind: MethodKind.UserDefinedOperator} method => method.Name,
+                IMethodSymbol { MethodKind: MethodKind.FunctionPointerSignature} method => $"functionPointer_{Math.Abs(method.ToDisplayString().GetHashCode())}",
                 IMethodSymbol method => method.ToDisplayString(ValidVariableNameFormat),
                 _ => symbol.ToDisplayString(ValidVariableNameFormat)
             };
@@ -429,7 +430,11 @@ namespace Cecilifier.Core.Extensions
             return modifiers.ToString();
         }
         
-        public static TypeResolutionContext NewTypeResolutionContextFor(this ITypeSymbol type, ResolveTargetKind resolveTargetKind) =>
-            new(resolveTargetKind, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None);
+        public static TypeResolutionContext NewTypeResolutionContextFor(this ITypeSymbol type, ResolveTargetKind resolveTargetKind) => new(resolveTargetKind, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None);
+        public static TypeResolutionContext ToTypeResolutionContext(this IParameterSymbol parameter, ResolveTargetKind resolveTargetKind) 
+                                                        => new(
+                                                                resolveTargetKind, 
+                                                                (parameter.Type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None) | 
+                                                                (parameter.RefKind != RefKind.None ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None));
     }
 }

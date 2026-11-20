@@ -245,7 +245,7 @@ namespace Cecilifier.Core.AST
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Volatile);
 
             field.EnsureFieldExists(Context, name);
-            var fieldReference = field.FieldResolverExpression(Context);
+            var fieldReference = Context.MemberResolver.ResolveField(field);
             MemberAssignment(field.Type, field.RefKind, fieldReference.AsToken(), field.StoreOpCodeForFieldAccess());
         }
 

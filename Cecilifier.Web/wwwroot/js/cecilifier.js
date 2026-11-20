@@ -246,7 +246,7 @@ function showListOfFixedIssuesInStagingServer(force) {
             return;
 
         window.localStorage.setItem("last_shown_issue_number", Date.parse(sortedIssues[0].updated_at) + "");
-        SnackBar({
+        new SnackBar({
             message: issuesHtml,
             dismissible: true,
             status: "Info",
@@ -265,7 +265,7 @@ function retrieveListOfFixedIssuesInStagingServer(callback) {
                 callback(issues);
             }
             catch (e) {
-                SnackBar({
+                new SnackBar({
                     message: `Unable to retrieve list of fixed issues in staging server.`,
                     dismissible: true,
                     status: "Warning",
@@ -277,7 +277,7 @@ function retrieveListOfFixedIssuesInStagingServer(callback) {
             }
         }
         else if (this.readyState === 4 && this.status === 500) {
-            SnackBar({
+            new SnackBar({
                 message: this.responseText,
                 dismissible: true,
                 status: "Error",
@@ -740,23 +740,6 @@ function setSendToDiscordTooltip()
     //TODO: Set the tooltip, i.e, use MSG
 }
 
-function setAlert(div_id, msg) {
-    const div = document.getElementById(div_id);
-
-    if (msg == null) {
-        div.style.zIndex = "0";
-        div.style.opacity = "0";
-        div.style.position = "absolute";
-        div.children[1].innerHTML = "";
-    } else {
-        div.style.zIndex = "100";
-        div.style.opacity = "1";
-        div.style.position = "relative";
-        div.children[1].innerHTML = msg;
-        div.style.display = "block";
-    }
-}
-
 function initializeWebSocket() {
     const scheme = document.location.protocol === "https:" ? "wss" : "ws";
     const port = document.location.port ? (":" + document.location.port) : "";
@@ -797,7 +780,7 @@ function initializeWebSocket() {
         console.log(`Cecilifier websocket closed: ${event.reason} (${event.code})`);
         if (event.code !== WebSocketNormalClosure && event.code !== WebSocketEndPointShutdown) {
             if (websocket.isRetryingToConnect === 0) {
-                SnackBar({
+                new SnackBar({
                     message: "Cecilifier WebSocket was disconnected; trying to reconnect...",
                     dismissible: true,
                     status: "Error",
@@ -856,21 +839,45 @@ function initializeWebSocket() {
             }
 
             monaco.editor.setModelMarkers(csharpCode.getModel(), "Errors", compilerErrors);
-            
-            const toast = SnackBar({
-                message: `Code contains ${compilerErrors.length} compilation errors.`,
-                dismissible: false,
-                status: "Error",
-                timeout: 120000,
-                actions: [
-                    {
-                        text: "Close this to remove the error markers",
-                        dismiss: false,
-                        function: removeMarkersFromCSharpCode
-                    }
-                ]
-            });
+           
+            const toast = new SnackBar({
+                                    message: `Code contains ${compilerErrors.length} compilation errors.`,
+                                    dismissible: false,
+                                    status: "Error",
+                                    timeout: 120000,
+                                    actions: [         
+                                        {
+                                            text: "Close this to remove the error markers",
+                                            dismiss: false,
+                                            function: removeMarkersFromCSharpCode
+                                        },
+                                    ]
+                                });
             toastsToCleanUpBeforeCecilifying.push(toast);
+            
+            if (response.unresolvedTypes.length > 0)
+            {
+                const toast = new SnackBar({
+                        message: `Failed to resolve the following types:<br/>${response.unresolvedTypes.join("</br>   ")}`,
+                        dismissible: true,
+                        status: "Info",
+                        timeout: 120000,
+                        actions: [
+                            {
+                                text: "Use the 'Assembly References' dialog to specify assemblies to be referenced.",
+                                dismiss: true,
+                                function: function () {
+                                    const index = toastsToCleanUpBeforeCecilifying.indexOf(toast);
+                                    if (index !== -1) {
+                                        toastsToCleanUpBeforeCecilifying.splice(index, 1); // removes the toast from the list of toasts to be cleaned up
+                                    }
+                                    ShowAssemblyReferencesDialog();
+                                }
+                            },
+                        ]
+                });
+                toastsToCleanUpBeforeCecilifying.push(toast);
+            }
         } else if (response.status === CecilifierResponseStatus.InternalError) {
             ShowErrorDialog("", response.error, "We've got an internal error.");
         } else if (response.status === CecilifierResponseStatus.MissingAssemblies) {

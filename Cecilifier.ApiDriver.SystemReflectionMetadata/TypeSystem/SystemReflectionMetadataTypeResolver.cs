@@ -43,6 +43,9 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
     protected override ResolvedType ResolveFromAssembly(ITypeSymbol type, in TypeResolutionContext resolutionContext)
     {
+        if (resolutionContext.TargetKind == ResolveTargetKind.AttributeNamedArgument)
+            return "ScalarType().SystemType()";
+        
         var memberRefVarName = _context.Naming.SyntheticVariable(type.ToValidVariableName(), ElementKind.MemberReference);
         
         var assemblyReferenceName = _context.AssemblyResolver.Resolve(_context, type.ContainingAssembly);
@@ -81,6 +84,10 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return "Void()";
         }
 
+        if (SymbolEqualityComparer.Default.Equals(_context.RoslynTypeSystem.SystemType, type) 
+            && resolutionContext.TargetKind == ResolveTargetKind.AttributeNamedArgument || resolutionContext.TargetKind == ResolveTargetKind.AttributeArgument)
+            return $""".SystemType("{type.FullyQualifiedName()}")""";
+        
         var resolvedTypeDetails = new ResolvedTypeDetails();
         if (type.IsPrimitiveType() || type.SpecialType == SpecialType.System_String || type.SpecialType == SpecialType.System_Object || type.SpecialType == SpecialType.System_IntPtr)
             return ResolvedType.FromDetails(
@@ -130,7 +137,7 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
         if (!resolved)
             return resolved;
 
-        if (context.TargetKind == ResolveTargetKind.Instruction)
+        if (context.TargetKind == ResolveTargetKind.Instruction && type.TypeKind != TypeKind.TypeParameter)
         {
             return new ResolvedType($"MetadataTokens.GetToken({resolved})");
         }
@@ -242,9 +249,10 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             return resolved;
         }
 
+        
         var immutableArray = typeArguments.ToImmutableArray();
         var definitionVariable = _context.DefinitionVariables.GetOrRegisterNonMethodVariable(
-            typeName, 
+            $"{typeName}{HashCodeFor(typeArguments)}", // use a unique type name for each type instantiation. 
             string.Empty, 
             VariableMemberKind.None, 
             new TypeResolutionContext(ResolveTargetKind.None, TypeResolutionOptions.RegisterVariables),
@@ -292,6 +300,11 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     protected override ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext)
     {
         var details = new ResolvedTypeDetails();
+        if (pointerType.SpecialType == SpecialType.System_Void)
+        {
+            return ResolvedType.FromDetails(details.WithTypeEncoder(TypeEncoderFor(in resolutionContext)).WithMethodBuilder("VoidPointer()"));
+        }
+        
         return ResolvedType.FromDetails(
             details.WithTypeEncoder(TypeEncoderFor(in resolutionContext))
                 .WithMethodBuilder($"Pointer().{Resolve(pointerType, new TypeResolutionContext(ResolveTargetKind.ComposedElementType, resolutionContext.Options))}"));
@@ -299,9 +312,27 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
 
     protected override ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer, in TypeResolutionContext resolutionContext)
     {
-        throw new NotImplementedException();
+        return $$"""
+                Type().FunctionPointer(SignatureCallingConvention.Default, FunctionPointerAttributes.None, {{functionPointer.Signature.TypeParameters.Length}}).Parameters(
+                        {{functionPointer.Signature.Parameters.Length}},
+                        returnEncoder => returnEncoder.{{_context.TypeResolver.Resolve(functionPointer.Signature.ReturnType, functionPointer.Signature.ReturnType.NewTypeResolutionContextFor(ResolveTargetKind.ReturnType))}},
+                        parameterEncoder => { {{ string.Join("", functionPointer.Signature.Parameters.Select(p => TypeSystemHelpers.ParameterExpressionFor(_context, p))) }} }
+                );
+                """;
     }
-    
+
+    public override ResolvedType MakeStandaloneSignature(IFunctionPointerTypeSymbol type)
+    { 
+        var variable = TypeSystemHelpers.NewMethodSignature(_context, type.Signature);
+        variable.ThrowIfVariableIsNotValid();
+        
+        var standaloneSignatureVariable = _context.Naming.SyntheticVariable("signature", ElementKind.MemberReference);
+
+        _context.Generate($"var {standaloneSignatureVariable} = metadata.AddStandaloneSignature({variable.VariableName});");
+        _context.WriteNewLine();
+        return standaloneSignatureVariable;
+    }
+
     public override ResolvedType MakeByRefType(in ResolvedType resolvedType) => resolvedType; // noop in SRM. ByRef types are handled during type resolution.
     
     private static string TypeEncoderFor(in TypeResolutionContext resolutionContext)
@@ -316,7 +347,8 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
             ResolveTargetKind.GenericTypeArgument => "",
             ResolveTargetKind.GenericTypeParameterConstraint => "",
             ResolveTargetKind.ComposedElementType => "",
-            ResolveTargetKind.AttributeNamedArgument or ResolveTargetKind.AttributeArgument => "ScalarType()%",
+            ResolveTargetKind.AttributeNamedArgument  => "ScalarType()%",
+            ResolveTargetKind.AttributeArgument => "",
             _ => $"Type(isByRef: {isByRef})%",
         };
     }
@@ -380,4 +412,15 @@ public class SystemReflectionMetadataTypeResolver(SystemReflectionMetadataContex
     private string GenericParameterExpressionFor(ResolvedType genericTypeParameter, TypeParameterKind typeParameterKind)=> typeParameterKind == TypeParameterKind.Type
         ? $"GenericTypeParameter({genericTypeParameter})"
         : $"GenericMethodTypeParameter({genericTypeParameter})";
+    
+    private int HashCodeFor(Span<ResolvedType> typeArguments)
+    {
+        int hashCode = -1521134295;
+        foreach (var typeArgument in typeArguments)
+        {
+            hashCode = HashCode.Combine(hashCode, typeArgument.Expression.GetHashCode());
+        }
+        
+        return hashCode;
+    }
 }

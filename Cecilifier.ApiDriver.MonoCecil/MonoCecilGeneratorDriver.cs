@@ -13,7 +13,7 @@ namespace Cecilifier.ApiDriver.MonoCecil;
 
 public class MonoCecilGeneratorDriver : IILGeneratorApiDriver
 {
-    public string AsCecilApplication(string cecilifiedCode, string mainTypeName, string? entryPointVar)
+    public string AsCecilApplication(string cecilifiedCode, string comment, string mainTypeName, string? entryPointVar)
     {
         var moduleKind = entryPointVar == null ? "ModuleKind.Dll" : "ModuleKind.Console";
         var entryPointStatement = entryPointVar != null ? $"\t\t\tassembly.EntryPoint = {entryPointVar};\n" : string.Empty;
@@ -50,7 +50,7 @@ public class SnippetRunner
 				Path.ChangeExtension(typeof(SnippetRunner).Assembly.Location, ""{Constants.Common.RuntimeConfigJsonExt}""),
                 Path.ChangeExtension(args[0], ""{Constants.Common.RuntimeConfigJsonExt}""),
                 true);
-        }}
+        }}{ (string.IsNullOrWhiteSpace(comment) ? "" : $"{Environment.NewLine}{Environment.NewLine}/*{Environment.NewLine}{comment}{Environment.NewLine}*/{Environment.NewLine}") }
 	}}
 }}";
     }

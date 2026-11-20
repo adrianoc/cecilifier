@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Cecilifier.Core.ApiDriver;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.TypeSystem;
 using Cecilifier.Core.Variables;
@@ -57,20 +58,20 @@ public class DelayedDefinitionsManager
         typeRecordOrNullRef.Fields.Add(field);
     }
 
-    public int RegisterLocalVariable(string declaringMethodVariable, string localVarName, ResolvedType resolvedVarType, Action<IVisitorContext, string, ResolvedType> action)
+    public int RegisterLocalVariable(LocalVariableDefinitionContext localVariableDefinitionContext, Action<IVisitorContext, string, ResolvedType> action)
     {
-        var localVariable = new LocalVariableRecord(localVarName, resolvedVarType, action);
+        var localVariable = new LocalVariableRecord(localVariableDefinitionContext.Name, localVariableDefinitionContext.Type, action);
 
-        var method = _postponedTypeDefinitions.Values.SelectMany(ptd => ptd.Methods).Single(pmd => pmd.MethodVariable == declaringMethodVariable);
-        Debug.Assert(method != null, $"Method with variable name {declaringMethodVariable} was not found.");
+        var method = _postponedTypeDefinitions.Values.SelectMany(ptd => ptd.Methods).Single(pmd => pmd.MethodVariable == localVariableDefinitionContext.MethodVariable);
+        Debug.Assert(method != null, $"Method with variable name {localVariableDefinitionContext.MethodVariable} was not found.");
 
         method.LocalVariables.Add(localVariable);
         return method.LocalVariables.Count - 1;
     }
     
-    public void RegisterProperty(string propertyName,string propertyDefinitionVariable, string declaringTypeName, string declaringTypeVariable, Action<IVisitorContext, string, string, string, string> propertyProcessor)
+    public void RegisterProperty(string propertyName,string propertyDefinitionVariable, string declaringTypeName, List<ParameterSpec> parameters, ResolvedType propertyType, Action<IVisitorContext, string, string, string, List<ParameterSpec>, ResolvedType> propertyProcessor)
     {
-        GetCurrentTypeDefinition().Properties.Add(new PropertyDefinitionRecord(propertyName, propertyDefinitionVariable, declaringTypeName, propertyProcessor));
+        GetCurrentTypeDefinition().Properties.Add(new PropertyDefinitionRecord(propertyName, propertyDefinitionVariable, declaringTypeName, parameters, propertyType, propertyProcessor));
     }
     
     public void RegisterEvent(string eventName,string propertyDefinitionVariable, string declaringTypeName, Action<IVisitorContext, string, string, string> eventProcessor)

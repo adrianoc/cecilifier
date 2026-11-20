@@ -17,14 +17,17 @@ public record ParameterSymbolParameterSpec(IParameterSymbol Parameter, IVisitorC
 {
     private readonly string? _registrationTypeName;
 
-    public override ResolvedType ElementType => Context.TypeResolver.Resolve(Parameter.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, TypeResolutionOptions.None, MethodVariable));
+    public override ResolvedType ElementType => Context.TypeResolver.Resolve(Parameter.Type, new TypeResolutionContext(ResolveTargetKind.Parameter, GetTypeResolutionOptions(), MethodVariable));
+
 
     public override string? RegistrationTypeName
     {
         get => _registrationTypeName ?? Parameter.Type.ToDisplayString();
         init => _registrationTypeName = value;
     }
-
+    
+    private TypeResolutionOptions GetTypeResolutionOptions() => RefKind != RefKind.None ? TypeResolutionOptions.IsByRef : TypeResolutionOptions.None;
+    
     public override string? ParamsAttributeName  => Parameter.ParamsAttributeMatchingType(); 
 }
 

@@ -78,12 +78,11 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
             if (x != null && y == null)
                 return 1;
 
-            var nameComp = x.DeclaringType.FullName.CompareTo(y.DeclaringType.FullName);
-            if (nameComp != 0)
+            if (!TypeReferenceComparer.Instance.Equals(x.DeclaringType, y.DeclaringType))
             {
-                return nameComp;
+                return -1;
             }
-
+            
             if (x.HasThis ^ y.HasThis)
             {
                 return -1;
@@ -110,10 +109,9 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
                 return -1;
             }
 
-            var returnTypeComp = x.ReturnType.FullName.CompareTo(y.ReturnType.FullName);
-            if (returnTypeComp != 0)
+            if (!TypeReferenceComparer.Instance.Equals(x.ReturnType, y.ReturnType))
             {
-                return returnTypeComp;
+                return -1;
             }
 
             if (x.HasParameters ^ y.HasParameters)
@@ -129,10 +127,10 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
             for (var i = 0; i < x.Parameters.Count; i++)
             {
-                var paramTypeComp = x.Parameters[i].ParameterType.FullName.CompareTo(y.Parameters[i].ParameterType.FullName);
-                if (paramTypeComp != 0)
+                var paramTypeComp = TypeReferenceComparer.Instance.Equals(x.Parameters[i].ParameterType, y.Parameters[i].ParameterType);
+                if (!paramTypeComp)
                 {
-                    return paramTypeComp;
+                    return -1;
                 }
 
                 if (x.Parameters[i].Attributes != y.Parameters[i].Attributes)
@@ -143,10 +141,9 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
             for (int i = 0; i < x.GenericParameters.Count; i++)
             {
-                genParamComp = x.GenericParameters[i].FullName.CompareTo(y.GenericParameters[i].FullName);
-                if (genParamComp != 0)
+                if (!TypeReferenceComparer.Instance.Equals(x.GenericParameters[i], y.GenericParameters[i]))
                 {
-                    return genParamComp;
+                    return -1;
                 }
             }
 
@@ -157,11 +154,10 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
                 for (int i = 0; i < xGen.GenericArguments.Count; i++)
                 {
-                    var compGenArg = xGen.GenericArguments[i].FullName.CompareTo(yGen.GenericArguments[i].FullName);
-                    if (compGenArg == 0)
+                    if (TypeReferenceComparer.Instance.Equals(xGen.GenericArguments[i], yGen.GenericArguments[i]))
                         continue;
 
-                    return compGenArg;
+                    return -1;
                 }
             }
 

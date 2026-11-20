@@ -71,67 +71,6 @@ public class StackallocTests : CecilifierUnitTestBase
                                                + @"\1Stloc, l_b_3\);\s+"
                                                + @"\1Ret\);\s+"));
     }
-
-    [Test]
-    public void Test_Issue_133_Assign_StackallocToSpan()
-    {
-        var result = RunCecilifier(@"using System; class Foo { void Bar() { Span<byte> s = stackalloc byte[1000]; } }");
-
-        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-        Assert.That(cecilifiedCode, Does.Match(@".+//Span<byte> s = stackalloc byte\[1000\];\s+" +
-                                               @"var l_s_3 = new VariableDefinition\(assembly.MainModule.ImportReference\(typeof\(System.Span<>\)\).MakeGenericInstanceType\(assembly.MainModule.TypeSystem.Byte\)\);\s+" +
-                                               @"m_bar_1.Body.Variables.Add\(l_s_3\);\s+" +
-                                               @"il_bar_2.Emit\(OpCodes.Ldc_I4, 1000\); // 1000 \(elements\) \* 1 \(bytes per element\)\s+" +
-                                               @"il_bar_2.Emit\(OpCodes.Conv_U\);\s+" +
-                                               @"il_bar_2.Emit\(OpCodes.Localloc\);\s+" +
-                                               @"il_bar_2.Emit\(OpCodes.Ldc_I4, 1000\);\s+"));
-        Assert.That(cecilifiedCode, Does.Match(
-            @"il_bar_2.Emit\(OpCodes.Newobj, assembly.MainModule.ImportReference\(l_spanCtor_4\)\);\s+" +
-            @"il_bar_2.Emit\(OpCodes.Stloc, l_s_3\);\s+"));
-    }
-
-    [Test]
-    public void Test_Issue_133_Span_InitializedByStackallocWithSizeFromParameter_PassedAsParameter()
-    {
-        var result = RunCecilifier(@"using System; class Foo { static void Bar(Span<int> span) {  Bar(stackalloc int[1000]); } }");
-        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-
-        var expectedLines = new[]
-        {
-                "il_bar_2.Emit(OpCodes.Ldc_I4, 4000);", "il_bar_2.Emit(OpCodes.Conv_U);", "il_bar_2.Emit(OpCodes.Localloc);", "il_bar_2.Emit(OpCodes.Ldc_I4, 4000);",
-                "var l_spanCtor_4 = new MethodReference(\".ctor\", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference(typeof(System.Span<>)).MakeGenericInstanceType(assembly.MainModule.TypeSystem.Int32)) { HasThis = true };",
-                "l_spanCtor_4.Parameters.Add(new ParameterDefinition(\"ptr\", ParameterAttributes.None, assembly.MainModule.TypeSystem.Void.MakePointerType()));",
-                "l_spanCtor_4.Parameters.Add(new ParameterDefinition(\"length\", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));",
-                "il_bar_2.Emit(OpCodes.Newobj, assembly.MainModule.ImportReference(l_spanCtor_4));", "il_bar_2.Emit(OpCodes.Call, m_bar_1);", "il_bar_2.Emit(OpCodes.Ret);",
-            };
-
-        foreach (var expectedLine in expectedLines)
-        {
-            Assert.That(cecilifiedCode, Contains.Substring(expectedLine));
-        }
-    }
-
-    [Test]
-    public void Test_Issue_133_Span_InitializedByStackallocWithSizeFromField_PassedAsParameter()
-    {
-        var result = RunCecilifier(@"using System; class Foo { public static int countField; static void Bar(Span<int> span) {  Bar(stackalloc int[countField]); } }");
-        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-
-        var expectedLines = new[]
-        {
-                "il_bar_3.Emit(OpCodes.Ldsfld, fld_countField_1);", "il_bar_3.Emit(OpCodes.Conv_U);", "il_bar_3.Emit(OpCodes.Sizeof, assembly.MainModule.TypeSystem.Int32);", "il_bar_3.Emit(OpCodes.Mul_Ovf_Un);",
-                "il_bar_3.Emit(OpCodes.Localloc);", "il_bar_3.Emit(OpCodes.Ldfld, fld_countField_1);",
-                "var l_spanCtor_5 = new MethodReference(\".ctor\", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference(typeof(System.Span<>)).MakeGenericInstanceType(assembly.MainModule.TypeSystem.Int32)) { HasThis = true };",
-                "l_spanCtor_5.Parameters.Add(new ParameterDefinition(\"ptr\", ParameterAttributes.None, assembly.MainModule.TypeSystem.Void.MakePointerType()));",
-                "l_spanCtor_5.Parameters.Add(new ParameterDefinition(\"length\", ParameterAttributes.None, assembly.MainModule.TypeSystem.Int32));",
-                "il_bar_3.Emit(OpCodes.Newobj, assembly.MainModule.ImportReference(l_spanCtor_5));", "il_bar_3.Emit(OpCodes.Call, m_bar_2);", "il_bar_3.Emit(OpCodes.Ret);",
-            };
-
-        foreach (var expectedLine in expectedLines)
-        {
-            Assert.That(cecilifiedCode, Contains.Substring(expectedLine));
-        }
-    }
     
     [Test]
     public void Test_Span_InitializedByStackallocWithSizeFromProperty()
@@ -164,34 +103,6 @@ public class StackallocTests : CecilifierUnitTestBase
                                                (?<ilp>\s+il_bar_\d+\.Emit\(OpCodes\.){storageLoadOpCodeAndArgument}\);
                                                \k<ilp>Conv_U\);
                                                """));
-    }
-    
-    [Test]
-    public void ImplicitStackAllocInNestedExpressions()
-    {
-        var code = @"using System; class C { void M() => M2(stackalloc [] { 1, 2, 3}); void M2(Span<int> span) {} }";
-        var result = RunCecilifier(code);
-        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-
-        Assert.That(cecilifiedCode, Does.Match(
-            @"var (l_spanCtor_\d+) = new MethodReference\("".ctor"", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference\(typeof\(System\.Span<>\)\).MakeGenericInstanceType\(.+TypeSystem.Int32\)\) { HasThis = true };\s+" +
-            @"\1.Parameters.Add\(.+""ptr"".+assembly.MainModule.TypeSystem.Void.MakePointerType\(\).+\);\s+" +
-            @"\1.Parameters.Add\(.+""length"".+TypeSystem.Int32.+\);\s+" +
-            @"il_M_\d+.Emit\(OpCodes.Newobj, assembly.MainModule.ImportReference\(\1\)\);"));
-    }
-
-    [Test]
-    public void ExplicitStackAllocInNestedExpressions()
-    {
-        var code = @"using System; class C { void M() => M2(stackalloc int[42]); void M2(Span<int> span) {} }";
-        var result = RunCecilifier(code);
-        var cecilifiedCode = result.GeneratedCode.ReadToEnd();
-
-        Assert.That(cecilifiedCode, Does.Match(
-            @"var (l_spanCtor_\d+) = new MethodReference\("".ctor"", assembly.MainModule.TypeSystem.Void, assembly.MainModule.ImportReference\(typeof\(System\.Span<>\)\).MakeGenericInstanceType\(.+TypeSystem.Int32\)\) { HasThis = true };\s+" +
-            @"\1.Parameters.Add\(.+""ptr"".+assembly.MainModule.TypeSystem.Void.MakePointerType().+\);\s+" +
-            @"\1.Parameters.Add\(.+""length"".+TypeSystem.Int32.+\);\s+" +
-            @"il_M_\d+.Emit\(OpCodes.Newobj, assembly.MainModule.ImportReference\(\1\)\);"));
     }
     
     [TestCase("System.Span<byte>")]

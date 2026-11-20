@@ -29,7 +29,7 @@ public static class CecilifierContextExtensions
         if (!currentMethod.IsValid)
             throw new InvalidOperationException("Could not resolve current method declaration variable.");
 
-        return context.ApiDefinitionsFactory.LocalVariable(context, localVarName, currentMethod.VariableName, varType);
+        return context.ApiDefinitionsFactory.LocalVariable(context, new(localVarName, varType, currentMethod.VariableName));
     }
 
     internal static bool TryApplyConversions(this IVisitorContext context, IlContext ilVar, IOperation operation)
@@ -60,6 +60,15 @@ public static class CecilifierContextExtensions
         {
             EmitNewobjOpcodeFor(context, in ilVar, coalesce.Type);
         }
+        else if (operation is IConversionOperation { IsImplicit: true } && operation.ChildOperations.ElementAtOrDefault(0)?.Kind != OperationKind.Coalesce)
+        {
+            var convertedFromType = context.SemanticModel.GetTypeInfo(operation.Syntax).Type;
+            var implicitOperatorMethod = operation.Type?.GetMembers("op_Implicit").Cast<IMethodSymbol>().SingleOrDefault(op => SymbolEqualityComparer.Default.Equals(op.Parameters[0].Type, convertedFromType));
+            if (implicitOperatorMethod == null)
+                return false;
+            
+            context.AddCallToMethod(implicitOperatorMethod, ilVar);
+        }
         else
             return false;
 
@@ -78,7 +87,7 @@ public static class CecilifierContextExtensions
         static ParameterSpec NullableTypeParameter(IVisitorContext context)
         {
             var typeParameterSymbol = context.RoslynTypeSystem.SystemNullableOfT.TypeParameters[0];
-            var resolvedNullableTypeParameter = context.TypeResolver.Resolve(typeParameterSymbol, ResolveTargetKind.TypeReference);
+            var resolvedNullableTypeParameter = context.TypeResolver.Resolve(typeParameterSymbol, new TypeResolutionContext(ResolveTargetKind.TypeReference, TypeResolutionOptions.None) { TypeParameterProviderVar = context.TypeResolver.Bcl.System.NullableOfT.Expression });
             return new ParameterSpec(typeParameterSymbol.Name, resolvedNullableTypeParameter, RefKind.None, string.Empty);
         }
     }
@@ -188,7 +197,7 @@ public static class CecilifierContextExtensions
         }
         else
         {
-            methodDeclarationVar = method.MethodKind == MethodKind.Constructor
+            methodDeclarationVar = method.MethodKind == MethodKind.Constructor || method.ContainingType.IsRecord
                 ? context.Naming.Constructor((BaseTypeDeclarationSyntax) method.ContainingType.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax(), method.IsStatic)
                 : context.Naming.MethodDeclaration((BaseMethodDeclarationSyntax) method.DeclaringSyntaxReferences.SingleOrDefault()?.GetSyntax());
         }

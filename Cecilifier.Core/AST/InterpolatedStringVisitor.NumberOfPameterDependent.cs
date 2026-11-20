@@ -48,7 +48,8 @@ namespace Cecilifier.Core.AST
         public override void VisitInterpolation(InterpolationSyntax node)
         {
             Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Dup);
-            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldc_I4, _currentParameterIndex);
+            // we cast _currentParameterIndex to int to bind TOperand in WriteCilInstruction<TOperand>() to the correct type since that impact on how some Api drivers emits code.
+            Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Ldc_I4, (int) _currentParameterIndex);
 
             base.VisitInterpolation(node);
             Context.ApiDriver.WriteCilInstruction(Context, _ilVar, OpCodes.Stelem_Ref);

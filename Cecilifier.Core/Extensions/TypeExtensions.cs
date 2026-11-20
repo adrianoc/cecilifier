@@ -20,11 +20,6 @@ namespace Cecilifier.Core.Extensions
             return new ResolvedType($"{type}.MakeGenericInstanceType({string.Join(", ", typeArguments)})");
         }
 
-        public static ResolvedType MakeGenericInstanceType(this ResolvedType type, ResolvedType typeArgument)
-        {
-            return new ResolvedType($"{type}.MakeGenericInstanceType({typeArgument})");
-        }
-
         public static bool IsPrimitiveType(this ITypeSymbol type) => type.SpecialType switch
         {
             SpecialType.System_Boolean => true,

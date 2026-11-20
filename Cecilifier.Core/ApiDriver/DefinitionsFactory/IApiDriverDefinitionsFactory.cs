@@ -32,7 +32,7 @@ public interface IApiDriverDefinitionsFactory
     /// <param name="interfaces"></param>
     /// <param name="ownTypeParameters"></param>
     /// <param name="outerTypeParameters"></param>
-    /// <param name="properties"></param>
+    /// <param name="layoutProperties"></param>
     /// <returns></returns>
     public IEnumerable<string> Type(
         IVisitorContext context,
@@ -44,7 +44,7 @@ public interface IApiDriverDefinitionsFactory
         IEnumerable<ITypeSymbol> interfaces,
         IEnumerable<TypeParameterSyntax>? ownTypeParameters,
         IEnumerable<TypeParameterSyntax> outerTypeParameters,
-        params TypeLayoutProperty[] properties);
+        params TypeLayoutProperty[] layoutProperties);
     
     /// <summary>
     /// Factory method used to emit a synthetic type, i.e. a type that is not defined in the compilation unit.
@@ -58,7 +58,7 @@ public interface IApiDriverDefinitionsFactory
     /// <param name="interfaces"></param>
     /// <param name="ownTypeParameters"></param>
     /// <param name="outerTypeParameters"></param>
-    /// <param name="properties"></param>
+    /// <param name="layoutProperties"></param>
     /// <returns></returns>
     /// <remarks>This </remarks>
     public IEnumerable<string> Type(
@@ -71,7 +71,7 @@ public interface IApiDriverDefinitionsFactory
         IEnumerable<ResolvedType> interfaces,
         IEnumerable<string>? ownTypeParameters,
         IEnumerable<string>? outerTypeParameters,
-        params TypeLayoutProperty[] properties);
+        params TypeLayoutProperty[] layoutProperties);
 
     void UpdateBaseTypeIfNeeded(IVisitorContext context, ITypeSymbol typeSymbol, string typeDefinitionVariable);
     
@@ -102,7 +102,7 @@ public interface IApiDriverDefinitionsFactory
         out MethodDefinitionVariable methodDefinitionVariable // we can't use the method name in some scenarios (indexers, for instance) 
     );
 
-    public IEnumerable<string> Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters);
+    public string Constructor(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string typeName, bool isStatic, string methodAccessibility, ParameterSpec[] parameters);
     
     public IEnumerable<string> Parameter(IVisitorContext context, ParameterSpec parameterSpec, string memberVar, string paramVar);
     
@@ -110,8 +110,8 @@ public interface IApiDriverDefinitionsFactory
     public IEnumerable<string> Field(IVisitorContext context, MemberDefinitionContext definitionContext, string declaringTypeName, ResolvedType fieldType, string fieldAttributes, bool isVolatile, bool isByRef, FieldInitializationData initializer = default);
     public IEnumerable<string> FieldReference(IVisitorContext context, string fieldReferenceVariable, string fieldName, ResolvedType fieldType, in ResolvedType declaringType);
     
-    IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, ResolvedType[] localVariableTypes, InstructionRepresentation[] instructions);
-    DefinitionVariable LocalVariable(IVisitorContext context, string variableName, string methodDefinitionVariableName, ResolvedType resolvedType);
+    IEnumerable<string> MethodBody(IVisitorContext context, string methodName, IlContext ilContext, Span<LocalVariableDefinitionContext> localVariables, InstructionRepresentation[] instructions);
+    DefinitionVariable LocalVariable(IVisitorContext context, in LocalVariableDefinitionContext localVariableDefinitionContext);
     IEnumerable<string> Property(IVisitorContext context, BodiedMemberDefinitionContext definitionContext, string declaringTypeName, List<ParameterSpec> propertyParameters, ResolvedType propertyType);
     IEnumerable<string> Attribute(IVisitorContext context, IMethodSymbol attributeCtor, string attributeVarBaseName, string attributeTargetVar, VariableMemberKind targetKind, params CustomAttributeArgument[] arguments);
 

@@ -49,6 +49,8 @@ namespace Cecilifier.Core.TypeSystem
         public abstract ResolvedType ResolvePredefinedType(ITypeSymbol type, in TypeResolutionContext resolutionContext);
         public abstract ResolvedType MakeArrayType(ITypeSymbol elementType, in TypeResolutionContext resolutionContext);
         protected abstract ResolvedType MakePointerType(ITypeSymbol pointerType, in TypeResolutionContext resolutionContext);
+        public abstract ResolvedType MakeStandaloneSignature(IFunctionPointerTypeSymbol type);
+        
         protected abstract ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer, in TypeResolutionContext resolutionContext);
         protected abstract ResolvedType ResolveTypeParameter(ITypeSymbol type, in TypeResolutionContext resolutionContext);
         public abstract ResolvedType ResolveTypeParameter(ResolvedType genericTypeParameter, TypeParameterKind typeParameterKind, in TypeResolutionContext resolutionContext);

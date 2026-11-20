@@ -44,7 +44,7 @@ namespace Cecilifier.Core.AST
         protected void AddCilInstruction(IlContext ilVar, OpCode opCode, ITypeSymbol type)
         {
             var operand = Context.TypeResolver.Resolve(type, new TypeResolutionContext(ResolveTargetKind.Instruction, type.IsValueType ? TypeResolutionOptions.IsValueType : TypeResolutionOptions.None));
-            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, new CilToken(operand.Expression));
+            Context.ApiDriver.WriteCilInstruction(Context, ilVar, opCode, operand.Expression.AsToken());
         }
 
         protected string AddCilInstructionWithLocalVariable(IlContext ilVar, OpCode opCode)
@@ -366,7 +366,7 @@ namespace Cecilifier.Core.AST
             Debug.Assert(nodeParent != null);
 
             fieldSymbol.EnsureFieldExists(Context, node);
-            var resolvedFieldVariable = fieldSymbol.FieldResolverExpression(Context);
+            var resolvedFieldVariable = Context.MemberResolver.ResolveField(fieldSymbol);
             
             if (fieldSymbol.HasConstantValue && fieldSymbol.IsConst)
             {
@@ -653,7 +653,7 @@ namespace Cecilifier.Core.AST
 
             if (typeSymbol is IFunctionPointerTypeSymbol functionPointer)
             {
-                var operand = CecilDefinitionsFactory.CallSite(Context.TypeResolver, functionPointer);
+                var operand = Context.TypeResolver.MakeStandaloneSignature(functionPointer);
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Calli, operand.AsToken());
                 return;
             }

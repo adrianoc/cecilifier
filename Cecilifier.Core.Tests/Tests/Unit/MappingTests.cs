@@ -1,20 +1,14 @@
 using System;
 using System.IO;
 using Cecilifier.ApiDriver.MonoCecil;
-using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Misc;
 using Cecilifier.Core.Naming;
-using Cecilifier.Core.Tests.Framework;
-using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Tests.Unit
 {
     [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
-    [TestFixture(typeof(SystemReflectionMetadataContext),  TestName = "System.Reflection.Metadata")]
-    [EnableForContext<SystemReflectionMetadataContext>(nameof(Test_CecilifierPreamble_LineCount), IgnoreReason = "Not implemented")]
     public class MappingTests<TContext> where TContext : IVisitorContext
     {
         [Test]

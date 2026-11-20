@@ -157,7 +157,7 @@ public class RecordTests : CecilifierUnitTestBase
         Assert.That(cecilifiedCode, Does.Match( """m_toString_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "ToString()");
         Assert.That(cecilifiedCode, Does.Match( """m_getHashCode_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "GetHashCode()");
         Assert.That(cecilifiedCode, Does.Match( """m_equalsObjectOverload_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Equals(object)");
-        Assert.That(cecilifiedCode, Does.Match( """m_equalsOperator_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Operator ==");
+        Assert.That(cecilifiedCode, Does.Match( """m_equalityOperator_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Operator ==");
         Assert.That(cecilifiedCode, Does.Match( """m_inequalityOperator_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Operator !=");
         Assert.That(cecilifiedCode, Does.Match( """m_getValue_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Value property getter");
         Assert.That(cecilifiedCode, Does.Match( """m_setValue_\d+.CustomAttributes.Add\(attr_compilerGenerated_\d+\);"""), "Value property setter");

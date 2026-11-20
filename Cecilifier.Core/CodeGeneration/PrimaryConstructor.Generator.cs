@@ -22,19 +22,19 @@ namespace Cecilifier.Core.CodeGeneration;
 /// </summary>
 public class PrimaryConstructorGenerator
 {
-    internal static void AddPropertiesFrom(IVisitorContext context, string typeDefinitionVariable, TypeDeclarationSyntax type, INamedTypeSymbol declaringType)
+    internal static void AddPropertiesFrom(IVisitorContext context, TypeDeclarationSyntax type, INamedTypeSymbol declaringType)
     {
-        if (type.ParameterList is null)
-            return;
-
-        foreach (var parameter in type.GetUniqueParameters(context))
+        if (type.ParameterList is not null)
         {
-            AddPropertyFor(context, parameter, typeDefinitionVariable, declaringType);
-            context.WriteNewLine();
+            foreach (var parameter in type.GetUniqueParameters(context))
+            {
+                AddPropertyFor(context, parameter, declaringType);
+                context.WriteNewLine();
+            }
         }
     }
 
-    private static void AddPropertyFor(IVisitorContext context, ParameterSyntax parameter, string typeDefinitionVariable, INamedTypeSymbol declaringType)
+    private static void AddPropertyFor(IVisitorContext context, ParameterSyntax parameter, INamedTypeSymbol declaringType)
     {
         using var _ = LineInformationTracker.Track(context, parameter);
 
@@ -46,13 +46,13 @@ public class PrimaryConstructorGenerator
         var propDefVar = context.Naming.SyntheticVariable(parameter.Identifier.Text, ElementKind.Property);
         var paramSymbol = context.SemanticModel.GetDeclaredSymbol(parameter).EnsureNotNull<ISymbol, IParameterSymbol>();
         var definitionContext = new BodiedMemberDefinitionContext(parameter.Identifier.Text, propDefVar, declaringTypeVariable.VariableName, MemberOptions.None, IlContext.None);
-        var exps = context.ApiDefinitionsFactory.Property(context, definitionContext, declaringTypeVariable.MemberName, [], context.TypeResolver.Resolve(paramSymbol.Type, ResolveTargetKind.None));
+        var exps = context.ApiDefinitionsFactory.Property(context, definitionContext, declaringTypeVariable.MemberName, [], context.TypeResolver.Resolve(paramSymbol.Type, ResolveTargetKind.Property));
         
         context.Generate(exps);
         context.WriteNewLine();
 
         var publicPropertyMethodAttributes = "MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName";
-        var propertyType = context.SemanticModel.GetDeclaredSymbol(parameter).GetMemberType();
+        var propertyType = context.SemanticModel.GetDeclaredSymbol(parameter)!.GetMemberType();
         var propertyData = new PropertyGenerationData(
                                     declaringType.OriginalDefinition.ToDisplayString(),
                                     declaringTypeVariable.VariableName,
@@ -89,7 +89,7 @@ public class PrimaryConstructorGenerator
             }
             context.WriteNewLine();
         }
-        
+
         void AddInit()
         {
             context.WriteComment($"{propertyData.Name} init");
@@ -107,34 +107,30 @@ public class PrimaryConstructorGenerator
     internal static void AddPrimaryConstructor(IVisitorContext context, string recordTypeDefinitionVariable, TypeDeclarationSyntax typeDeclaration)
     {
         context.WriteComment($"Constructor: {typeDeclaration.Identifier.ValueText}{typeDeclaration.ParameterList}");
-        var typeSymbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration).EnsureNotNull<ISymbol, ITypeSymbol>();
+        var typeSymbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration).EnsureNotNull<ISymbol, INamedTypeSymbol>();
         
         var ctorVar = context.Naming.Constructor(typeDeclaration, false);
         string typeName = typeSymbol.OriginalDefinition.ToDisplayString();
         var parameters = typeDeclaration.ParameterList?.Parameters.Select(p => p.ToParameterSpec(context, ctorVar)).ToArray() ?? [];
-        var exps = context.ApiDefinitionsFactory.Constructor(
-            context, 
-            new BodiedMemberDefinitionContext("ctor", ctorVar, recordTypeDefinitionVariable, MemberOptions.None, IlContext.None), 
-            typeName, 
-            false, 
-            "MethodAttributes.Public", 
-            parameters);
-        var ctorExp = exps;
-        context.Generate(ctorExp);
-
+        var ilContext = context.ApiDriver.NewIlContext(context, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar);
+        context.ApiDefinitionsFactory.Constructor(
+                                            context,
+                                            new BodiedMemberDefinitionContext(new MemberDefinitionContext("ctor", ctorVar, recordTypeDefinitionVariable) { ContainingTypeName = typeSymbol.Name }, MemberOptions.None, ilContext),
+                                            typeName,
+                                            false,
+                                            "MethodAttributes.Public",
+                                            parameters);
+        
         // parameterless primary constructors still have a body comprised of a single return.
         // in this scenario Parameters will be an empty list.
         if (typeDeclaration.ParameterList?.Parameters == null)
             return;
         
-        var ilContext = context.ApiDriver.NewIlContext(context, $"ctor_{typeDeclaration.Identifier.ValueText}", ctorVar);
         var ctorExps = context.ApiDefinitionsFactory.MethodBody(context, $"ctor_{typeDeclaration.Identifier.ValueText}", ilContext, [], []);
         context.Generate(ctorExps);
 
         var resolvedType = context.TypeResolver.Resolve(typeSymbol, ResolveTargetKind.TypeReference);
-        Func<string, string> fieldRefResolver = backingFieldVar => typeDeclaration.TypeParameterList?.Parameters.Count > 0 
-            ? $"new FieldReference({backingFieldVar}.Name, {backingFieldVar}.FieldType, {resolvedType})" 
-            : backingFieldVar;
+        var instantiatedType = context.TypeResolver.MakeGenericInstanceType("", resolvedType, [], ResolveTargetKind.GenericTypeArgument);
 
         var uniqueParameters = typeDeclaration.GetUniqueParameters(context).ToHashSet();
         foreach (var parameter in typeDeclaration.ParameterList.Parameters)
@@ -146,13 +142,18 @@ public class PrimaryConstructorGenerator
             paramVar.ThrowIfVariableIsNotValid();
             
             context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ldarg_0);
-            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ldarg, paramVar.VariableName);
+            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Ldarg, paramVar.VariableName.AsToken());
 
             var backingFieldVar = context.DefinitionVariables.GetVariable(Utils.BackingFieldNameForAutoProperty(parameter.Identifier.ValueText), VariableMemberKind.Field, typeSymbol.OriginalDefinition.ToDisplayString());
             if (!backingFieldVar.IsValid)
                 throw new InvalidOperationException($"Backing field variable for property '{parameter.Identifier.ValueText}' could not be found.");
 
-            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Stfld, fieldRefResolver(backingFieldVar.VariableName));
+            var parameterSymbol = context.SemanticModel.GetDeclaredSymbol(parameter).EnsureNotNull();
+            var resolvedBakingField = typeDeclaration.TypeParameterList?.Parameters.Count > 0
+                ? context.MemberResolver.ResolveField(backingFieldVar.MemberName, instantiatedType, context.TypeResolver.Resolve(parameterSymbol.Type, parameterSymbol.ToTypeResolutionContext(ResolveTargetKind.Field)))
+                : backingFieldVar;
+            
+            context.ApiDriver.WriteCilInstruction(context, ilContext, OpCodes.Stfld, resolvedBakingField.AsToken());
         }
 
         if (!typeSymbol.IsValueType)
@@ -179,7 +180,7 @@ public class PrimaryConstructorGenerator
                 baseCtor = context.RoslynTypeSystem.SystemObject.GetMembers().OfType<IMethodSymbol>().Single(m => m is { Name: ".ctor" }).MethodResolverExpression(context);
             }
         
-            context.ApiDriver.WriteCilInstruction(context, ctorIlVar, OpCodes.Call, baseCtor);
+            context.ApiDriver.WriteCilInstruction(context, ctorIlVar, OpCodes.Call, baseCtor.AsToken());
         }
     }
 }

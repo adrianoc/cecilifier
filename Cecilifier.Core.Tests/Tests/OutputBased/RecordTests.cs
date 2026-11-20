@@ -2,7 +2,6 @@ using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
-using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
@@ -10,8 +9,7 @@ namespace Cecilifier.Core.Tests.OutputBased;
 public class RecordTests
 {
     [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
-    [TestFixture(typeof(SystemReflectionMetadataContext),  TestName = "System.Reflection.Metadata")]
-    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
+    [TestFixture(typeof(SystemReflectionMetadataContext), TestName = "System.Reflection.Metadata")]
     public class Misc<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
@@ -107,7 +105,6 @@ public class RecordTests
 
     [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
     [TestFixture(typeof(SystemReflectionMetadataContext),  TestName = "System.Reflection.Metadata")]
-    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
     public class EqualsOverloadTest<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
@@ -193,7 +190,6 @@ public class RecordTests
 
     [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
     [TestFixture(typeof(SystemReflectionMetadataContext),  TestName = "System.Reflection.Metadata")]
-    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
     public class Deconstruct<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
@@ -263,7 +259,6 @@ public class RecordTests
 
     [TestFixture(typeof(MonoCecilContext), TestName = "Mono.Cecil")]
     [TestFixture(typeof(SystemReflectionMetadataContext),  TestName = "System.Reflection.Metadata")]
-    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
     public class Generic<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
@@ -306,13 +301,12 @@ public class RecordTests
     
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
     public class RecordStructs<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
     {
         [Test]
         public void Test()
         {
-            AssertOutput("""
+           AssertOutput("""
                          var d = new RecordStruct(42, "Foo");
                          System.Console.WriteLine(d);
                           

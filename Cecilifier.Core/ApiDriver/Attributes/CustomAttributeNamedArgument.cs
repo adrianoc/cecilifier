@@ -8,4 +8,9 @@ public class CustomAttributeNamedArgument : CustomAttributeArgument
     public required string Name { get; init; }
     public NamedArgumentKind Kind { get; init; }
     public required ResolvedType ResolvedType { get; init; }
+
+    public override int GetHashCode()
+    {
+        return Name.GetHashCode() ^ base.GetHashCode();
+    }
 }

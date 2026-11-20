@@ -11,7 +11,7 @@ namespace Cecilifier.Core
 {
     public sealed class Cecilifier
     {
-        private const LanguageVersion CurrentLanguageVersion = LanguageVersion.CSharp13;
+        private const LanguageVersion CurrentLanguageVersion = LanguageVersion.CSharp14;
         public static readonly int SupportedCSharpVersion = int.Parse(CurrentLanguageVersion.ToString().Substring("CSharp".Length));
 
         public static CecilifierResult Process<TContext>(Stream content, CecilifierOptions options) where TContext : IVisitorContext
@@ -32,10 +32,11 @@ namespace Cecilifier.Core
             var errors = comp.GetDiagnostics()
                                             .Where(d => d.Severity == DiagnosticSeverity.Error)
                                             .Select(CecilifierDiagnostic.FromCompiler)
-                                            .ToArray();
-            if (errors.Length > 0)
+                                            .ToList();
+            if (errors.Count > 0)
             {
-                throw new SyntaxErrorException(errors);
+                var unresolvedTypes = CSharpCompilerDiagnosticParser.UnresolvedTypeNamesFrom(comp.GetDiagnostics());
+                throw new SyntaxErrorException(errors, unresolvedTypes);
             }
 
             var semanticModel = comp.GetSemanticModel(syntaxTree);
@@ -48,7 +49,7 @@ namespace Cecilifier.Core
             visitor.Visit(root);
             
             var mainTypeName = visitor.MainType != null ? visitor.MainType.Identifier.Text : "Cecilified";
-            var reader = new StringReader(context.ApiDriver.AsCecilApplication(context.Output, mainTypeName, visitor.MainMethodDefinitionVariable));
+            var reader = new StringReader(context.ApiDriver.AsCecilApplication(context.Output, options.Comment, mainTypeName, visitor.MainMethodDefinitionVariable));
             return new CecilifierResult(reader, mainTypeName, context.Mappings, context, context.Diagnostics);
         }
 

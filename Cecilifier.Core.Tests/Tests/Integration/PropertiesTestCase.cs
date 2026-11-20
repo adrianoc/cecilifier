@@ -2,7 +2,6 @@ using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
-using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
@@ -17,13 +16,12 @@ namespace Cecilifier.Core.Tests.Integration
         [TestCase("Indexer")]
         [TestCase("IndexerOverloads")]
         [TestCase("PropertyAccessors")]
-        [ParameterizedResourceFilter<SystemReflectionMetadataContext>("SimpleProperty", "SimpleAutoProperty", "SimpleStaticProperty", "PropertyAccessors", "Indexer", IgnoreReason = "WIP")]
-        public void TestProperties(string testName, string ignoredILErrors = null)
+        public void TestProperties(string testName)
         {
             AssertResourceTest(new CecilifyTestOptions
             {
                 ResourceName = $"Members/Properties/{testName}", 
-                IgnoredILErrors = ignoredILErrors
+                IgnoredILErrors = null
             });
         }
     }

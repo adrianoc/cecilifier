@@ -10,6 +10,7 @@ public enum ResolveTargetKind
     Field, 
     LocalVariable,
     Parameter,
+    Property,
     ReturnType,
     Instruction,
     TypeReference,

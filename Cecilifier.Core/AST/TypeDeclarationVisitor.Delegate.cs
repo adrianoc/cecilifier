@@ -53,15 +53,14 @@ internal partial class TypeDeclarationVisitor
                 new("method", Context.TypeResolver.Resolve(Context.RoslynTypeSystem.SystemIntPtr, ResolveTargetKind.Parameter), RefKind.None, Constants.ParameterAttributes.None) { RegistrationTypeName = "System.IntPtr" },
             };
             
-            var exps = Context.ApiDefinitionsFactory.Constructor(
+            Context.ApiDefinitionsFactory.Constructor(
                 Context, 
                 new BodiedMemberDefinitionContext("ctor", ctorLocalVar, typeVar, MemberOptions.IsRuntime, null), 
                 node.Identifier.Text, 
                 false, 
                 "MethodAttributes.FamANDAssem | MethodAttributes.Family", 
                 parameters);
-            Context.Generate(exps);
-
+     
             var invokeMethodVar = Context.Naming.SyntheticVariable("Invoke", ElementKind.Method);
             var invokeParameters = node.ParameterList.Parameters.Select(p => p.ToParameterSpec(Context, invokeMethodVar)).ToArray();
             // Invoke() method

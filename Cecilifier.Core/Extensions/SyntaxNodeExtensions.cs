@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Cecilifier.Core.ApiDriver.Attributes;
+using Cecilifier.Core.ApiDriver.Handles;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
@@ -201,7 +202,7 @@ namespace Cecilifier.Core.Extensions
             
             foreach (var argument in self.Arguments)
             {
-                var constantValue = GetConstantValue(context, argument.Expression);
+                var constantValue = GetConstantValueInAttribute(context, argument.Expression);
                 if (argument.NameEquals == null)
                 {
                     yield return new CustomAttributeArgument { Value = constantValue.Value };
@@ -219,16 +220,11 @@ namespace Cecilifier.Core.Extensions
             }
         }
 
-        private readonly record struct RawCSharpCode(string Code)
-        {
-            public override string ToString() => Code;
-        }
-        
-        private static Optional<object> GetConstantValue(IVisitorContext context, ExpressionSyntax expression)
+        private static Optional<object> GetConstantValueInAttribute(IVisitorContext context, ExpressionSyntax expression)
         {
             return expression switch
             {
-                TypeOfExpressionSyntax typeOf => new RawCSharpCode(context.TypeResolver.Resolve(context.SemanticModel.GetTypeInfo(typeOf.Type).Type, ResolveTargetKind.TypeReference).Expression),
+                TypeOfExpressionSyntax typeOf => new CilToken(context.TypeResolver.Resolve(context.SemanticModel.GetTypeInfo(typeOf.Type).Type, ResolveTargetKind.AttributeArgument).Expression),
                 ImplicitArrayCreationExpressionSyntax implicitArrayCreation => ConstantValueForArray(implicitArrayCreation.Initializer),
                 ArrayCreationExpressionSyntax arrayCreation => ConstantValueForArray(arrayCreation.Initializer),
                 

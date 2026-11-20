@@ -3,7 +3,6 @@ using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
-using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
@@ -83,7 +82,6 @@ public class CollectionExpressionTests<TContext> : OutputBasedTestBase<TContext>
     }
     
     [Test]
-    [ParameterizedResourceFilter<SystemReflectionMetadataContext>("long[]")]
     public void ImplicitNumericConversions_Are_Applied([Values("List<long>", "long[]", "Span<long>")] string targetType, [Values("[2, 1]", "[5, 4, 3, 2, 1]")] string items)
     {
         AssertOutput(

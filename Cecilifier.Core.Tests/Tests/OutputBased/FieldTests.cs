@@ -2,7 +2,6 @@ using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
-using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
@@ -13,7 +12,6 @@ public class FieldTests<TContext> : OutputBasedTestBase<TContext> where TContext
 {
     [TestCase("int", "field = 42", "42",  TestName = "Non generic")]
     [TestCase("T", "field = true", "True", TestName = "Generic")]
-    [ParameterizedResourceFilter<SystemReflectionMetadataContext>("int")]
     public void InstanceFieldOnGenericType(string fieldType, string fieldInitialization, string expectedOutput)
     {
         AssertOutput($$"""
@@ -27,7 +25,6 @@ public class FieldTests<TContext> : OutputBasedTestBase<TContext> where TContext
     
     [TestCase("int", "42", "42",  TestName = "Non generic")]
     [TestCase("T", "true", "True", TestName = "Generic")]
-    [ParameterizedResourceFilter<SystemReflectionMetadataContext>("int")]
     public void StaticFieldOnGenericType(string fieldType, string fieldValue, string expectedOutput)
     {
         AssertOutput($$"""
@@ -55,6 +52,5 @@ public class FieldTests<TContext> : OutputBasedTestBase<TContext> where TContext
                        }
                        """, 
             expectedOutput);
-        
     }
 }

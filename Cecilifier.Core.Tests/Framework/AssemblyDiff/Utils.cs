@@ -41,7 +41,7 @@ namespace Cecilifier.Core.Tests.Framework.AssemblyDiff
 
         private static bool CustomAttributeMatches(CustomAttribute lhs, CustomAttribute rhs)
         {
-            if (lhs.Constructor.ToString() != rhs.Constructor.ToString())
+            if (MethodReferenceComparer.Instance.Compare(lhs.Constructor, rhs.Constructor) != 0)
             {
                 return false;
             }

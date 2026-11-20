@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using Cecilifier.Core;
 using Cecilifier.Core.Extensions;
-using Cecilifier.Core.Misc;
+using Cecilifier.Core.Naming;
 using Cecilifier.Core.TypeSystem;
 using Microsoft.CodeAnalysis;
 
@@ -23,10 +23,11 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
 
         if (resolutionContext.TypeParameterProviderVar == null)
             return null;
-            
+
+        var methodRefVarName = _context.Naming.SyntheticVariable("provider", ElementKind.MemberReference);
         var resolvedType = typeParameterSymbol.ContainingSymbol.Kind switch
         {
-            SymbolKind.NamedType => $"(({resolutionContext.TypeParameterProviderVar} is MethodReference methodReference) ? ((GenericInstanceType) methodReference.DeclaringType).ElementType : (IGenericParameterProvider) {resolutionContext.TypeParameterProviderVar} ).GenericParameters[{typeParameterSymbol.Ordinal}]",
+            SymbolKind.NamedType => $"(( ((object) {resolutionContext.TypeParameterProviderVar}) is MethodReference {methodRefVarName}) ? ((GenericInstanceType) {methodRefVarName}.DeclaringType).ElementType : (IGenericParameterProvider) {resolutionContext.TypeParameterProviderVar} ).GenericParameters[{typeParameterSymbol.Ordinal}]",
             SymbolKind.Method => $"{resolutionContext.TypeParameterProviderVar}.GenericParameters[{typeParameterSymbol.Ordinal}]",
             _ => null
         };
@@ -64,7 +65,18 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
 
     protected override ResolvedType MakeFunctionPointerType(IFunctionPointerTypeSymbol functionPointer, in TypeResolutionContext resolutionContext)
     {
-        return CecilDefinitionsFactory.FunctionPointerType(this, functionPointer);
+        return FunctionPointerTypeBasedCecilType(
+            this,
+            functionPointer,
+            (hasThis, parameters, returnType) => $"new FunctionPointerType() {{ {hasThis}, ReturnType = {returnType}, {parameters} }}");
+    }
+
+    public override ResolvedType MakeStandaloneSignature(IFunctionPointerTypeSymbol functionPointer)
+    {
+        return FunctionPointerTypeBasedCecilType(
+            this,
+            functionPointer,
+            (hasThis, parameters, returnType) => $"new CallSite({returnType}) {{ {hasThis}, {parameters} }}");
     }
 
     public override ResolvedType MakeGenericInstanceType(string typeName, ResolvedType openGenericType, INamedTypeSymbol genericTypeSymbol, in TypeResolutionContext resolutionContext)
@@ -88,4 +100,22 @@ public class MonoCecilTypeResolver(MonoCecilContext context) : TypeResolverBase<
     public override ResolvedType MakeByRefType(in ResolvedType resolvedType) =>  $"{resolvedType}.MakeByReferenceType()";
 
     internal ResolvedType ImportReference(ResolvedType typeReference) => $"assembly.MainModule.ImportReference({typeReference})";
+    
+    private static string FunctionPointerTypeBasedCecilType(ITypeResolver resolver, IFunctionPointerTypeSymbol functionPointer, Func<string, string, ResolvedType, string> factory)
+    {
+        var parameters = $"Parameters={{ {string.Join(',', functionPointer.Signature.Parameters.Select(p => ParameterDoesNotHandleParamsKeywordOrDefaultValue(resolver, p.Name, p.RefKind, resolver.Resolve(p.Type, ResolveTargetKind.Parameter))))} }}";
+        var returnType = resolver.Resolve(functionPointer.Signature.ReturnType, ResolveTargetKind.ReturnType);
+        return factory("HasThis = false", parameters, returnType);
+    }
+    
+    private static string ParameterDoesNotHandleParamsKeywordOrDefaultValue(ITypeResolver resolver, string name, RefKind byRef, ResolvedType resolvedType, string? paramAttributes = null)
+    {
+        paramAttributes ??= Constants.ParameterAttributes.None;
+        if (RefKind.None != byRef)
+        {
+            resolvedType = resolver.MakeByRefType(resolvedType);
+        }
+
+        return $"new ParameterDefinition(\"{name}\", {paramAttributes}, {resolvedType})";
+    }
 }

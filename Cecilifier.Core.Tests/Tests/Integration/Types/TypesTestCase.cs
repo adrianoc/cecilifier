@@ -16,7 +16,6 @@ public class TypesTestCase<TContext> : ResourceTestBase<TContext> where TContext
     [TestCase("AttributeFromSameAssembly")]
     [TestCase("AttributeWithTypeOfExpression")]
     [TestCase("AttributeGeneric")]
-    [ParameterizedResourceFilter<SystemReflectionMetadataContext>("AttributeWithProperty", IgnoreReason = "Other tests are failing")]
     public void AttributeTests(string typeName)
     {
         AssertResourceTest($"Types/{typeName}");

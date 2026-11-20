@@ -2,24 +2,12 @@ using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
-using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.Integration
 {
     [TestFixture(typeof(MonoCecilContext))]
     [TestFixture(typeof(SystemReflectionMetadataContext))]
-    [EnableForContext<SystemReflectionMetadataContext>(
-        nameof(TestDelegateInvocation),
-        nameof(TestAccessibilityModifiers),
-        nameof(TestNamespaces), 
-        nameof(TestPointerTypes), 
-        nameof(AttributesOnMembers), 
-        nameof(TestAttributesOnExplicitTargets), 
-        nameof(TestAttributeWithArrayInitializer), 
-        nameof(TestDllImport), 
-        nameof(TestTopLevelStatements),
-        IgnoreReason = "Not implemented yet")]
     public class MiscTestCase<TResource> : ResourceTestBase<TResource> where TResource : IVisitorContext
     {
         [TestCase("Parameters")]

@@ -68,12 +68,13 @@ namespace Cecilifier.Core.AST
             context.WriteNewLine();
             context.WriteComment($"Synthetic method for lambda expression: {lambda.HumanReadableSummary()}  @ ({lambda.GetLocation().GetLineSpan().StartLinePosition.Line}, {lambda.GetLocation().GetLineSpan().StartLinePosition.Character})");
             
+            var syntheticIlVar = context.ApiDriver.NewIlContext(context, syntheticMethodName, methodVar);
             // Use the lambda string representation to register the newly added method definition as the declaring type to allow us to look it up latter.
             // Also, we only support non-capturing lambda expressions, so we handle those as static (even if the code does not mark them explicitly as such)
             // if/when we decide to support lambdas that captures variables/fields/params/etc we will probably need to revisit this.
             var methodExps = context.ApiDefinitionsFactory.Method(
                                                             context,
-                                                            new BodiedMemberDefinitionContext(syntheticMethodName,methodVar, declaringTypeVarName, MemberOptions.Static, IlContext.None),
+                                                            new BodiedMemberDefinitionContext(syntheticMethodName,methodVar, declaringTypeVarName, MemberOptions.Static, syntheticIlVar),
                                                             lambda.ToString(),
                                                             "MethodAttributes.Public | MethodAttributes.Static",
                                                             lambda.ParameterList().Select(ParamSpecFor).ToArray(),
@@ -93,7 +94,6 @@ namespace Cecilifier.Core.AST
                     parameter.Accept(DefaultParameterExtractorVisitor.Instance));
             }
 
-            var syntheticIlVar = context.ApiDriver.NewIlContext(context, syntheticMethodName, methodVar);
             context.WriteNewLine();
 
             using (context.DefinitionVariables.WithVariable(methodDefinitionVariable))

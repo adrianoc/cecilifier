@@ -3,14 +3,12 @@ using Cecilifier.ApiDriver.MonoCecil;
 using Cecilifier.ApiDriver.SystemReflectionMetadata;
 using Cecilifier.Core.AST;
 using Cecilifier.Core.Tests.Framework;
-using Cecilifier.Core.Tests.Framework.Attributes;
 using NUnit.Framework;
 
 namespace Cecilifier.Core.Tests.OutputBased;
 
 [TestFixture(typeof(MonoCecilContext))]
 [TestFixture(typeof(SystemReflectionMetadataContext))]
-[EnableForContext<SystemReflectionMetadataContext>(IgnoreReason = "Not implemented yet")]
 public class ParamsTests<TContext> : OutputBasedTestBase<TContext> where TContext : IVisitorContext
 {
     [TestCaseSource(nameof(ParamsTestScenarios))]

@@ -82,7 +82,7 @@ function removeSelectedAssemblyReference() {
 /************************************************
  *         Assembly References Handling         *
  ************************************************/
-function ShowAssemblyReferencesDialog(title, header) {
+function ShowAssemblyReferencesDialog() {
     window.onresize = (e) => {
         ResizeDialog("assembly_references_dialog_id");
     };

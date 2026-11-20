@@ -489,7 +489,7 @@ namespace Cecilifier.Core.AST
                 var resolvedOutArgType = Context.TypeResolver.Resolve(localSymbol.Type, ResolveTargetKind.LocalVariable);
 
                 DefinitionVariable methodVar = Context.DefinitionVariables.GetLastOf(VariableMemberKind.Method);
-                var outLocalName = Context.ApiDefinitionsFactory.LocalVariable(Context, designation.Identifier.Text, methodVar.VariableName, resolvedOutArgType).VariableName;
+                var outLocalName = Context.ApiDefinitionsFactory.LocalVariable(Context, new(designation.Identifier.Text, resolvedOutArgType, methodVar.VariableName)).VariableName;
 
                 Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, outLocalName.AsToken());
             }
@@ -537,7 +537,7 @@ namespace Cecilifier.Core.AST
             var expressionTypeInfo = Context.SemanticModel.GetTypeInfo(node);
             var resolvedConcreteNullableType = Context.TypeResolver.Resolve(expressionTypeInfo.Type!, ResolveTargetKind.None);
             var resolvedConcreteNullableTypeForLocal = Context.TypeResolver.Resolve(expressionTypeInfo.Type!, ResolveTargetKind.LocalVariable);
-            var tempNullableVar = Context.ApiDefinitionsFactory.LocalVariable(Context, "nullable", currentMethodVar.VariableName, resolvedConcreteNullableTypeForLocal).VariableName;
+            var tempNullableVar = Context.ApiDefinitionsFactory.LocalVariable(Context, new("nullable", resolvedConcreteNullableTypeForLocal, currentMethodVar.VariableName)).VariableName;
 
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldloca_S, tempNullableVar);
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Initobj, resolvedConcreteNullableType);
@@ -1285,7 +1285,7 @@ namespace Cecilifier.Core.AST
         {
             // We handle all lambdas as static, i.e, non-capturing.
             // use the lambda string representation to lookup the variable with the synthetic method definition
-            var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.GetSyntheticMethodName(), VariableMemberKind.Method, node.ToString());
+            var syntheticMethodVariable = Context.DefinitionVariables.GetVariable(node.GetSyntheticMethodName(), VariableMemberKind.Method | VariableMemberKind.MethodReference, node.ToString());
             if (!syntheticMethodVariable.IsValid)
             {
                 // if we fail to resolve the variable it means this is un unsupported scenario (like a lambda that captures context)
@@ -1294,7 +1294,7 @@ namespace Cecilifier.Core.AST
             }
 
             Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldnull);
-            CodeGenerationHelpers.InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType!, syntheticMethodVariable.VariableName, new StaticDelegateCacheContext
+            InstantiateDelegate(Context, ilVar, Context.GetTypeInfo(node).ConvertedType!, syntheticMethodVariable.VariableName, new StaticDelegateCacheContext
             {
                 IsStaticDelegate = false
             });
@@ -1429,7 +1429,7 @@ namespace Cecilifier.Core.AST
             if (firstParentNotPartOfName is PrefixUnaryExpressionSyntax unaryPrefix && unaryPrefix.IsKind(SyntaxKind.AddressOfExpression))
             {
                 string operand = method.MethodResolverExpression(Context);
-                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldftn, operand);
+                Context.ApiDriver.WriteCilInstruction(Context, ilVar, OpCodes.Ldftn, operand.AsToken());
                 return;
             }
 
